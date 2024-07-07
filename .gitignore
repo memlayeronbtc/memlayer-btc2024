@@ -1,0 +1,13 @@
+coverage
+node_modules
+dist
+docs
+.DS_Store
+.env
+.idea
+artifacts
+cache
+*.log
+*.lock
+*.dbg.json
+
