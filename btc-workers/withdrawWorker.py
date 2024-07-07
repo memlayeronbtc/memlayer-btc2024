@@ -8,7 +8,6 @@ totalTransactionsList = {}
 
 while True:
     response = requests.get(url)
-
     response_json = response.json()
     # withdraw_requests = response_json['withdrawRequests'] ##real code
     testWithdraw = {
@@ -54,15 +53,10 @@ while True:
 
     for x in withdraw_requests: ##selects ids that are dupes
         if x in totalTransactionsList.values():
-            print("removing dupes")
             deleteDupes.append(x)
-        else:
-            print("no dupes")
 
     for y in deleteDupes: ##deletes those ids
         del withdraw_requests[y]
-
-    print(withdraw_requests)
 
     print("withdraw_requests", withdraw_requests)
     if len(withdraw_requests) == 0:
@@ -79,11 +73,9 @@ while True:
         if (value.get("ticker") in runesOwned and int(runesOwned[value.get("ticker")]) > int(value.get("amount")) and value.get("sent") == False):
             
             transactionList = list(withdraw_requests.values())
-            print("transactionList", transactionList)
             transactionInfo = transactionList[i1]
 
             idServerList = list(withdraw_requests.keys())
-            print("idServerList", idServerList)
             idServer = idServerList[i1]
             break
         i1 += 1
