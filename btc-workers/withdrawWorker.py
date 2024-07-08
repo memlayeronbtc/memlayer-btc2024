@@ -1,22 +1,24 @@
 import subprocess, time, requests, sys, json, pprint
 
-ordPath = "C:\\code\\ordinals-ord\\target\\release\\ord.exe"
+ordPath = "D:\\code\\bitcoin-university\\scripts\\ord.exe"
 url = "https://us-central1-memlayer.cloudfunctions.net/getwithdrawreq"
-isMainnet = True
+isMainnet = False
 willBroadcast = False
 totalTransactionsList = {}
 
-## TODO: need to get current blockHeight
 def getFeeRate():
-    response = requests.get("http://127.0.0.1/r/blockinfo/851157")
+    response0 = requests.get("http://127.0.0.1/r/blockheight")
+    blockHeight = response0.text
+    print(blockHeight)
+    response = requests.get(f"http://127.0.0.1/r/blockinfo/{blockHeight}")
     response_json = response.json()
-    pprint.pprint(response_json) ## TODO: use 1st percentile feerate_percentiles + 0.1
-    feeRate = "1.1"
+    pprint.pprint(response_json)
+    feeRate = round((response_json['median_fee'] / response_json['transaction_count'])+ 0.1, 2)
     return feeRate
 
 # sys.exit(1)
 while True:
-    fee = getFeeRate()
+    feeRate1 = getFeeRate()
     response = requests.get(url)
     response_json = response.json()
     withdraw_requests = response_json['withdrawRequests'] ##real code
@@ -75,11 +77,11 @@ while True:
     ## send runes
     rune = f"{amount}:{ticker}"
 
-    ## TODO: get mainnet fee-rate somewhere
+
     if isMainnet:
-        command = [ordPath, "wallet", "send", "--fee-rate",  fee, address, rune,  "--postage", "330sat", "--dry-run"]
+        command = [ordPath, "wallet", "send", "--fee-rate",  feeRate1, address, rune,  "--postage", "330sat", "--dry-run"]
     else:
-        command = [ordPath, "--signet", "wallet", "send", "--fee-rate",  fee, address, rune,  "--postage", "330sat", "--dry-run"]
+        command = [ordPath, "--signet", "wallet", "send", "--fee-rate",  feeRate1, address, rune,  "--postage", "330sat", "--dry-run"]
 
     if willBroadcast == True:
         command.pop()
