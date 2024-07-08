@@ -1,53 +1,25 @@
-import subprocess, time, requests, sys, json
+import subprocess, time, requests, sys, json, pprint
 
-ordPath = "D:\\code\\ord-0.18.5\\ord.exe"
+ordPath = "C:\\code\\ordinals-ord\\target\\release\\ord.exe"
 url = "https://us-central1-memlayer.cloudfunctions.net/getwithdrawreq"
-isDryRun = False
+isMainnet = True
+willBroadcast = False
 totalTransactionsList = {}
 
+## TODO: need to get current blockHeight
+def getFeeRate():
+    response = requests.get("http://127.0.0.1/r/blockinfo/851157")
+    response_json = response.json()
+    pprint.pprint(response_json) ## TODO: use 1st percentile feerate_percentiles + 0.1
+    feeRate = "1.1"
+    return feeRate
 
+# sys.exit(1)
 while True:
+    fee = getFeeRate()
     response = requests.get(url)
     response_json = response.json()
-    # withdraw_requests = response_json['withdrawRequests'] ##real code
-    testWithdraw = {
-    '-O0ynah_THC1Gw0Ag4yw': {
-        'amount': '999', 
-        'confirmed': False, 
-        'fromEthAddress': '0x87b0b999f86B87c99a64A3062bb6AA8830877A3C', 
-        'lastUpdate': 1720114375520, 
-        'network': 'rskTestnet', 
-        'ordAddress': 'tb1pr9d2gu2e7z6xvqj4qpkjnuk3fv87qcmhjupvjzcynqnwes8tng4qt3983t', 
-        'sent': False, 
-        'sentTx': '', 
-        'ticker': 'TESTRUNE'
-        }, 
-
-    '-O0ynbnPKCQn7dcZ5pIT': {
-        'amount': '499', 
-        'confirmed': False, 
-        'fromEthAddress': '0x87b0b999f86B87c99a64A3062bb6AA8830877A3C', 
-        'lastUpdate': 1720114380755, 
-        'network': 'rskTestnet', 
-        'ordAddress': 'tb1p72pg083vgmrrhjq55cmx6zega53pg3x6wfe62cjqe4pq7smqmdcsvyrkp9', 
-        'sent': False, 
-        'sentTx': '', 
-        'ticker': 'TESTRUNE'
-        }, 
-
-    '-O0yncvOtFR3PZ_rkfTY': {
-        'amount': '2000', 
-        'confirmed': False, 
-        'fromEthAddress': '0x87b0b999f86B87c99a64A3062bb6AA8830877A3C', 
-        'lastUpdate': 1720114385362, 
-        'network': 'rskTestnet', 
-        'ordAddress': 'tb1pju2hyn28ugt7h38wujzd6zuhl6llsp2x368zqulalyqaydjp797sxfgduy', 
-        'sent': False, 
-        'sentTx': '', 
-        'ticker': 'TESTRUNE'
-        }
-    }
-    withdraw_requests = testWithdraw
+    withdraw_requests = response_json['withdrawRequests'] ##real code
     i1 = 0
     deleteDupes = []
 
@@ -64,12 +36,22 @@ while True:
         time.sleep(60)
         continue
 
-    command = [ordPath, "--signet", "wallet", "balance"]
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    balanceList = json.loads(result.stdout)
-    runesOwned = balanceList['runes']
+    if isMainnet:
+        ordCommand = [ordPath, "wallet", "balance"]
+    else:
+        ordCommand = [ordPath, "--signet", "wallet", "balance"]
 
+    result = subprocess.run(ordCommand, shell=True, capture_output=True, text=True, encoding="UTF-8")
+    balanceList = json.loads(result.stdout)
+    
+    runesOwned = balanceList['runes']
+    pprint.pprint(runesOwned)
+
+    ## find first valid withdraw request
     for key, value in withdraw_requests.items(): ##checks if there is sufficient runes, and if the transaction is sent (picks out transaction from the request from the server)
+        ## TODO: use key, value instead of i1 
+        # print(key, value)
+        print(value.get("ticker"))
         if (value.get("ticker") in runesOwned and int(runesOwned[value.get("ticker")]) > int(value.get("amount")) and value.get("sent") == False):
             
             transactionList = list(withdraw_requests.values())
@@ -88,11 +70,18 @@ while True:
     address = transactionInfo['ordAddress']
     ticker = transactionInfo['ticker']
 
+    ## have one valid withdraw request and move on
+    
     ## send runes
     rune = f"{amount}:{ticker}"
-    command = [ordPath, "--signet", "wallet", "send", "--fee-rate",  "1", address, rune,  "--postage", "546sat", "--dry-run"]
 
-    if isDryRun == False:
+    ## TODO: get mainnet fee-rate somewhere
+    if isMainnet:
+        command = [ordPath, "wallet", "send", "--fee-rate",  fee, address, rune,  "--postage", "330sat", "--dry-run"]
+    else:
+        command = [ordPath, "--signet", "wallet", "send", "--fee-rate",  fee, address, rune,  "--postage", "330sat", "--dry-run"]
+
+    if willBroadcast == True:
         command.pop()
 
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
@@ -101,4 +90,5 @@ while True:
     transactionID = commandOutput["txid"]
     totalTransactionsList[transactionID] = idServer
     withdraw_requests[idServer]['sent'] = True
+    sys.exit()
     time.sleep(60)

@@ -1,10 +1,10 @@
 # memlayer-btc-workers
 
 ## quick start
-1. run `runBTCSignet.bat` or mainnet
-2. run `runOrdSignet.bat` or mainnet
-3. check balance in ord `ord wallet balance`
-4. open cmd and run your desired script (ex. `python withdrawWorker.py`)
+btc worker scripts need to be executed on a BTC full-node with [ord](https://docs.ordinals.com/) 
+1. set up a full node and run `ord wallet balance`
+2. update constants based on your own setup e.g., ord path
+3. `python withdrawWorker.py` (`python3`)
 
 ## how **withdrawWorker.py** works
 1. requests the server `https://us-central1-memlayer.cloudfunctions.net/getwithdrawreq` for withdraw transaction information (currently using test transaction info)
