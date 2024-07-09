@@ -11,3 +11,4 @@ cache
 *.lock
 *.dbg.json
 
+evm-contracts/package-lock.json
