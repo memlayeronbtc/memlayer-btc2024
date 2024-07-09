@@ -197,49 +197,6 @@ contract MemlayerToken is ERC20, ERC20Burnable, Ownable {
         return balance;
     }
 
-    function withdrawBalance(
-        address addr,
-        uint256 amount
-    ) public view returns (uint balance) {
-        require(tokenOperator[msg.sender], "invalid operator");
-        if (addr == address(0)) {
-            return 0;
-        } else {
-            revert OffchainLookup(
-                address(this),
-                gatewayUrls,
-                abi.encodeWithSelector(
-                    Gateway.withdrawSignedRunicBalance.selector,
-                    addr,
-                    name(),
-                    amount
-                ),
-                MemlayerToken.withdrawBalanceOfWithSig.selector,
-                abi.encode(addr, name(), amount)
-            );
-        }
-    }
-
-    // callback func to validate gateway signature
-    function withdrawBalanceOfWithSig(
-        bytes calldata result
-    ) external view returns (uint) {
-        (uint256 balance, bytes memory sig) = abi.decode(
-            result,
-            (uint256, bytes)
-        );
-
-        address recovered = keccak256(
-            abi.encodePacked(
-                "\x19Ethereum Signed Message:\n32",
-                keccak256(abi.encodePacked(balance))
-            )
-        ).recover(sig);
-
-        require(_signer == recovered, "Signer is not the signer of the token");
-        return balance;
-    }
-
     function getOrdAddress(address addr) public view returns (string memory) {
         if (addr == address(0)) {
             return "";
@@ -315,40 +272,64 @@ contract MemlayerToken is ERC20, ERC20Burnable, Ownable {
         return ethAddr;
     }
 
-    /* game mechanics */
-    function airdrop(address to, uint256 amount) public {
-        require(tokenOperator[msg.sender], "invalid operator");
-        require(
-            amount <= balanceOf(address(this)) && amount > 0,
-            "invalid amount"
-        );
-        transferFrom(address(this), to, amount);
-        emit Airdrop(to, amount);
-    }
-
-    function consume(address at, uint256 amount) public {
-        require(tokenOperator[msg.sender], "invalid operator");
-        require(amount <= balanceOf(at) && amount > 0, "invalid amount");
-        transferFrom(at, address(this), amount);
-        //burn(amount);
-        // burnFrom(at, amount);
-        emit Consume(at, amount);
-    }
-
-    // submit withdraw request
+    // submit withdraw request by user
     function withdrawToBTC(uint256 amount) public {
         require(amount > 0, "no balance to withdraw");
-        transferFrom(msg.sender, address(this), amount);
+        transfer(address(this), amount);
         pendingWithdrawToBTC[msg.sender] += amount;
     }
 
+    // operator
+    function withdrawBalance(
+        address addr,
+        uint256 amount
+    ) public view returns (uint balance) {
+        require(tokenOperator[msg.sender], "invalid operator");
+        if (addr == address(0)) {
+            return 0;
+        } else {
+            revert OffchainLookup(
+                address(this),
+                gatewayUrls,
+                abi.encodeWithSelector(
+                    Gateway.withdrawSignedRunicBalance.selector,
+                    addr,
+                    name(),
+                    amount
+                ),
+                MemlayerToken.withdrawBalanceOfWithSig.selector,
+                abi.encode(addr, name(), amount)
+            );
+        }
+    }
+
+    // callback func to validate gateway signature
+    function withdrawBalanceOfWithSig(
+        bytes calldata result
+    ) external view returns (uint) {
+        (uint256 balance, bytes memory sig) = abi.decode(
+            result,
+            (uint256, bytes)
+        );
+
+        address recovered = keccak256(
+            abi.encodePacked(
+                "\x19Ethereum Signed Message:\n32",
+                keccak256(abi.encodePacked(balance))
+            )
+        ).recover(sig);
+
+        require(_signer == recovered, "Signer is not the signer of the token");
+        return balance;
+    }
+
+    // finalize withdraw state by operator
     function finalizeWithdrawToBTC(address to) public {
         require(tokenOperator[msg.sender], "invalid operator");
         require(pendingWithdrawToBTC[to] > 0, "no pending balance to withdraw");
         _burn(address(this), pendingWithdrawToBTC[to]);
         pendingWithdrawToBTC[to] = 0;
-        finalizedWithdrawToBTC[to] = pendingWithdrawToBTC[to];
-        withdrawBalance(to, finalizedWithdrawToBTC[to]);
+        finalizedWithdrawToBTC[to] += pendingWithdrawToBTC[to];
     }
 
     /* game mechanics */
