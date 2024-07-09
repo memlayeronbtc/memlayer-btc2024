@@ -406,7 +406,16 @@ exports.getlifts = functions.https.onRequest((req, res) => {
             }
           }
 
-          const lift = token.lifts[0];
+          if (!("lifts" in token)){
+            return res.status(200).send({
+              success: false,
+              msg: "need to setup chain RPC info in firebase",
+              lastUpdate: Date.now(),
+            });
+          }
+
+          const lift = token?.lifts[0];
+          
           delete token.lifts;
 
           return res.status(200).send({
