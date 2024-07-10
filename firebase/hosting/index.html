@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <base href="/" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <link rel="icon" href="/src/favicon.ico?v=1.1" />
+
+    <title>memlayer</title>
+    <meta name="description" content="lifting mempool TXs to EVM chains" />
+
+    <meta property="og:url" content="https://memlayer.xyz/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="memlayer" />
+    <meta property="og:description" content="lifting mempool TXs to EVM chains" />
+    <meta property="og:image" content="/static/memlayerog.jpg" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="twitter:domain" content="memlayer.xyz" />
+    <meta property="twitter:url" content="https://memlayer.xyz/" />
+    <meta name="twitter:title" content="memlayer" />
+    <meta name="twitter:description" content="lifting mempool TXs to EVM chains" />
+    <meta name="twitter:image" content="/static/memlayerog.jpg" />
+    <style>
+      body {
+        color: #fff;
+        text-align: left;
+        background-color: #050505b7;
+        margin: 0px;
+        overflow-x: hidden;
+        font-family:
+          Lucida Console,
+          Consolas,
+          monospace;
+        display: flex;
+        justify-content: left;
+        align-items: top;
+        align-content: left;
+        word-wrap: break-word;
+        width: 100%;
+      }
+
+      #mempoolop {
+        /* font-size: x-large; */
+        font-weight: light;
+        overflow-wrap: anywhere;
+        width: 100%;
+        height: 100%;
+        margin: 0px;
+        z-index: 100;
+        background-color: rgb(0, 0, 0, 0.7);
+        padding-left: 50px;
+        padding-top: 20px;
+      }
+
+
+      @media screen and (max-width:450px) {
+        #mempoolop {
+        font-size: large;
+        padding: 20px;
+        }
+
+      }
+    </style>
+    <script src="https://ordinals.com/content/0bba310192dfcfa87203a072fa8f49c1e9c7cf39be13e83cfc3522a9eaf3076bi0"></script>
+    <script>
+      let TXs = [];
+      let websocket;
+      let vertexShaderText;
+      let fragShaderText;
+      let container;
+      let camera, scene, renderer;
+      let mesh;
+      let characterCount = 0;
+      let word = "";
+      const clock = new THREE.Clock();
+      const timeOffset = Math.random() * 100 + 100;
+
+      function initBlocks() {
+        //
+        // webgl credit: AlteredQualia (https://alteredqualia.com/)
+        //
+
+        container = document.getElementById("container");
+
+        camera = new THREE.PerspectiveCamera(
+          37,
+          window.innerWidth / window.innerHeight,
+          1,
+          15000,
+        );
+        camera.position.z = 30;
+        camera.position.y = 0;
+
+        scene = new THREE.Scene();
+
+        camera.lookAt(scene.position);
+
+        // 150,000 cubes
+        // 12 triangles per cube (6 quads)
+
+        var triangles = 12 * 100000;
+
+        // BufferGeometry with unindexed triangles
+        // use vertex colors to store centers of rotations
+
+        var geometry = new THREE.BufferGeometry();
+
+        geometry.attributes = {
+          position: {
+            itemSize: 3,
+            array: new Float32Array(triangles * 3 * 3),
+            numItems: triangles * 3 * 3,
+          },
+
+          normal: {
+            itemSize: 3,
+            array: new Float32Array(triangles * 3 * 3),
+            numItems: triangles * 3 * 3,
+          },
+
+          color: {
+            itemSize: 3,
+            array: new Float32Array(triangles * 3 * 3),
+            numItems: triangles * 3 * 3,
+          },
+        };
+
+        var positions = geometry.attributes.position.array;
+        var normals = geometry.attributes.normal.array;
+        var colors = geometry.attributes.color.array;
+
+        // Generate a single buffer with all the cubes
+
+        var n = 8000,
+          n2 = n / 2; // triangles spread in the cube
+        var d = 10;
+        d2 = d / 2 ; // individual triangle size
+
+        var color = new THREE.Color();
+
+        var pA = new THREE.Vector3();
+        var pB = new THREE.Vector3();
+        var pC = new THREE.Vector3();
+
+        var cb = new THREE.Vector3();
+        var ab = new THREE.Vector3();
+
+        var m = new THREE.Matrix4();
+        var m2 = new THREE.Matrix4();
+
+        var e = new THREE.Vector3(0, 0, 0);
+        var t = new THREE.Vector3();
+        var tt = new THREE.Vector3();
+        var u = new THREE.Vector3(0, 1, 0);
+
+        var v1 = new THREE.Vector3(0, 0, 0);
+        var v2 = new THREE.Vector3(d, 0, 0);
+        var v3 = new THREE.Vector3(d, d, 0);
+        var v4 = new THREE.Vector3(0, d, 0);
+
+        var v1b = new THREE.Vector3(0, 0, d);
+        var v2b = new THREE.Vector3(d, 0, d);
+        var v3b = new THREE.Vector3(d, d, d);
+        var v4b = new THREE.Vector3(0, d, d);
+
+        function addTriangle(k, x, y, z, vc, vb, va) {
+          // positions
+
+          pA.copy(va);
+          pB.copy(vb);
+          pC.copy(vc);
+
+          t.set(x, y, z);
+          t.multiplyScalar(0.431);
+
+          m.lookAt(e, tt, u);
+
+          m2.makeTranslation(t);
+
+          m2.multiplySelf(m);
+
+          m2.multiplyVector3(pA);
+          m2.multiplyVector3(pB);
+          m2.multiplyVector3(pC);
+
+          var ax = pA.x;
+          var ay = pA.y;
+          var az = pA.z;
+
+          var bx = pB.x;
+          var by = pB.y;
+          var bz = pB.z;
+
+          var cx = pC.x;
+          var cy = pC.y;
+          var cz = pC.z;
+
+          var j = k * 9;
+
+          positions[j] = ax;
+          positions[j + 1] = ay;
+          positions[j + 2] = az;
+
+          positions[j + 3] = bx;
+          positions[j + 4] = by;
+          positions[j + 5] = bz;
+
+          positions[j + 6] = cx;
+          positions[j + 7] = cy;
+          positions[j + 8] = cz;
+
+          // flat face normals
+
+          pA.set(ax, ay, az);
+          pB.set(bx, by, bz);
+          pC.set(cx, cy, cz);
+
+          cb.sub(pC, pB);
+          ab.sub(pA, pB);
+          cb.crossSelf(ab);
+
+          cb.normalize();
+
+          var nx = cb.x;
+          var ny = cb.y;
+          var nz = cb.z;
+
+          normals[j] = nx;
+          normals[j + 1] = ny;
+          normals[j + 2] = nz;
+
+          normals[j + 3] = nx;
+          normals[j + 4] = ny;
+          normals[j + 5] = nz;
+
+          normals[j + 6] = nx;
+          normals[j + 7] = ny;
+          normals[j + 8] = nz;
+
+          color.setRGB(t.x, t.y, t.z);
+
+          colors[j] = color.r;
+          colors[j + 1] = color.g;
+          colors[j + 2] = color.b;
+
+          colors[j + 3] = color.r;
+          colors[j + 4] = color.g;
+          colors[j + 5] = color.b;
+
+          colors[j + 6] = color.r;
+          colors[j + 7] = color.g;
+          colors[j + 8] = color.b;
+        }
+
+        for (var i = 0; i < triangles; i += 12) {
+          var x =
+            THREE.Math.randFloat(0.1 * n/1.52, 0.2 * n) *
+            (Math.random() > 0.5 ? 1 : -1) *
+            THREE.Math.randInt(0.5, 2);
+          var y =
+            THREE.Math.randFloat(0.1 * n/1.52, 0.2 * n) *
+            (Math.random() > 0.5 ? 1 : -1) *
+            THREE.Math.randInt(0.5, 2);
+          var z =
+            THREE.Math.randFloat(0.1 * n/1.52, 0.2 * n) *
+            (Math.random() > 0.5 ? 1 : -1) *
+            THREE.Math.randInt(0.5, 2);
+
+          tt.set(Math.random(), Math.random(), Math.random());
+
+          addTriangle(i, x, y, z, v1, v2, v4);
+          addTriangle(i + 1, x, y, z, v2, v3, v4);
+
+          addTriangle(i + 2, x, y, z, v4b, v2b, v1b);
+          addTriangle(i + 3, x, y, z, v4b, v3b, v2b);
+
+          addTriangle(i + 4, x, y, z, v1b, v2, v1);
+          addTriangle(i + 5, x, y, z, v1b, v2b, v2);
+
+          addTriangle(i + 6, x, y, z, v2b, v3, v2);
+          addTriangle(i + 7, x, y, z, v2b, v3b, v3);
+
+          addTriangle(i + 8, x, y, z, v3b, v4, v3);
+          addTriangle(i + 9, x, y, z, v3b, v4b, v4);
+
+          addTriangle(i + 10, x, y, z, v1, v4, v1b);
+          addTriangle(i + 11, x, y, z, v4, v4b, v1b);
+        }
+
+        geometry.computeBoundingSphere();
+
+        uniforms = {
+          amplitude: { type: "f", value: 0.0 },
+        };
+
+        const material = new THREE.ShaderMaterial({
+          // color: 0xf99620,
+          uniforms: uniforms,
+          vertexShader: vertexShaderText,
+          fragmentShader: fragShaderText,
+          vertexColors: THREE.VertexColors,
+          // wireframe: false,
+        });
+
+        mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        renderer = new THREE.WebGLRenderer({
+          antialias: false,
+          clearColor: 0x000000,
+          clearAlpha: 1,
+          alpha: false,
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        container.appendChild(renderer.domElement);
+
+        window.addEventListener("resize", onWindowResize, false);
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        render();
+      }
+
+      function render() {
+        var time = Date.now() * 0.001 + timeOffset;
+        var delta = clock.getDelta();
+
+        mesh.rotation.x = time * 0.00125;
+        mesh.rotation.y = time * 0.0015;
+        uniforms.amplitude.value += 2 * delta;
+        renderer.render(scene, camera);
+      }
+
+      async function init() {
+        const vertexShaderb64 = await fetch("https://ordinals.com/content/b97a1d7f6d730cdf1bcae249367a046d0eefb770c2791539f96cd43042b4df0ei0");
+        vertexShaderText = atob(await vertexShaderb64.text());
+        const fragShaderb64 = await fetch("/static/fragShader.js");
+        fragShaderText = (await fragShaderb64.text());
+
+        //fragShaderText = await fetch("/content/fragShader.js");
+        //fragShaderText = await fragShaderText.text();
+
+        initBlocks();
+        animate();
+      }
+      window.addEventListener(
+        "load",
+        async () => {
+          try {
+            await init();
+          } catch (error) {
+            console.log("oops", error);
+          }
+        },
+        false,
+      );
+    </script>
+  </head>
+  <body class="font-inter antialiased bg-new-slate text-slate-200 tracking-tight">
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div style="z-index: 100;background-color: rgb(0, 0, 0, 0.8); width: 100%;" id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <div id="container" style="position: absolute;"></div>
+  </body>
+</html>
