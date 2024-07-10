@@ -64,7 +64,7 @@
 
       }
     </style>
-    <script src="https://ordinals.com/content/0bba310192dfcfa87203a072fa8f49c1e9c7cf39be13e83cfc3522a9eaf3076bi0"></script>
+    <script src="/static/three.min.js"></script>
     <script>
       let TXs = [];
       let websocket;
@@ -343,13 +343,10 @@
       }
 
       async function init() {
-        const vertexShaderb64 = await fetch("https://ordinals.com/content/b97a1d7f6d730cdf1bcae249367a046d0eefb770c2791539f96cd43042b4df0ei0");
-        vertexShaderText = atob(await vertexShaderb64.text());
+        const vertexShaderb64 = await fetch("/static/vertexShader.js");
+        vertexShaderText = (await vertexShaderb64.text());
         const fragShaderb64 = await fetch("/static/fragShader.js");
         fragShaderText = (await fragShaderb64.text());
-
-        //fragShaderText = await fetch("/content/fragShader.js");
-        //fragShaderText = await fragShaderText.text();
 
         initBlocks();
         animate();

@@ -7,11 +7,10 @@ import {
   // Wallet
 } from "sats-connect";
 import logo from "../images/memlayerlogo512transparent.png";
+import btcgamelogo from "../images/bgames_logo.svg";
 import MemlayerTokenABI from "../abi/MemlayerTokenABI.json";
 
-
 const serverUrl = import.meta.env.VITE_FIREBASE_FUNCTION_URL;
-
 
 class Main extends Component {
   constructor(props) {
@@ -340,6 +339,15 @@ class Main extends Component {
                           >
                             {`Join early access whitelist`}
                           </Link>
+                          <a
+                            href="https://b.tc/conference/2024/bitcoin-games"
+                            target="_blank"
+                          >
+                            <img
+                              style={{ marginTop: "30px", width: "72px" }}
+                              src={btcgamelogo}
+                            />
+                          </a>
                         </div>
                       ) : (
                         <div>
@@ -356,6 +364,19 @@ class Main extends Component {
                               >
                                 {`Early Access`}
                               </button>
+                              <div
+                                data-aos="fade-up"
+                                data-aos-delay="2000"
+                              ></div>
+                              <a
+                                href="https://b.tc/conference/2024/bitcoin-games"
+                                target="_blank"
+                              >
+                                <img
+                                  style={{ marginTop: "30px", width: "72px" }}
+                                  src={btcgamelogo}
+                                />
+                              </a>
                             </div>
                           ) : (
                             <div>
@@ -430,7 +451,8 @@ class Main extends Component {
                                       body: JSON.stringify({
                                         ethAddress: ethAddress,
                                         runeAddress: ordinalAddress,
-                                        passcode: import.meta.env.VITE_FIREBASE_FUNCTION_PAIRING,
+                                        passcode: import.meta.env
+                                          .VITE_FIREBASE_FUNCTION_PAIRING,
                                       }),
                                       headers: {
                                         "Content-type":
@@ -483,17 +505,18 @@ class Main extends Component {
                         <br />
                         <br />
                         Rune deposit address:
-                              <br />
-                              <b style={{ fontSize: "small", color: "pink" }}>
-                                {import.meta.env.VITE_RUNE_DEPOSIT_ADDRESS}
-                              </b>
-                              <br />
-                              <span style={{ color: "red", fontSize: "small" }}>
-                                Only send 'whitelisted' runes FROM your BTC ord address
-                              </span>
-                              <br />
-                              <br />
-                              <hr />
+                        <br />
+                        <b style={{ fontSize: "small", color: "pink" }}>
+                          {import.meta.env.VITE_RUNE_DEPOSIT_ADDRESS}
+                        </b>
+                        <br />
+                        <span style={{ color: "red", fontSize: "small" }}>
+                          Only send 'whitelisted' runes FROM your BTC ord
+                          address
+                        </span>
+                        <br />
+                        <br />
+                        <hr />
                         <p style={{ fontSize: "smaller" }}>
                           {runes.map((rune, i) => (
                             <span key={`sp${rune.ticker}`}>
@@ -534,31 +557,58 @@ class Main extends Component {
                                 {rune.lifts[0].chain}
                               </a>
                               <br />
-                              {rune.confirmed > 0 && <span>Confirmed Deposit (L1): {rune.confirmed}{" "}
-                              {rune.symbol}
-                              <br /></span>}
-                              {rune.unconfirmed > 0 && <span>Unconfirmed Deposit (L1): {rune.unconfirmed}{" "}
-                              {rune.symbol}
-                              <br /></span>}
-                              { (rune.confirmed +
-                                rune.unconfirmed -
-                                erc20Balances[i]) > 0 && <span>Runic balance (Memlayer):{" "}
+                              {rune.confirmed > 0 && (
+                                <span>
+                                  Confirmed Deposit (L1): {rune.confirmed}{" "}
+                                  {rune.symbol}
+                                  <br />
+                                </span>
+                              )}
+                              {rune.unconfirmed > 0 && (
+                                <span>
+                                  Unconfirmed Deposit (L1): {rune.unconfirmed}{" "}
+                                  {rune.symbol}
+                                  <br />
+                                </span>
+                              )}
                               {rune.confirmed +
                                 rune.unconfirmed -
-                                erc20Balances[i]}{" "}
-                              {rune.symbol}
-                              <br /></span>}
-                              { Math.floor(erc20Balances[i]) > 0 && <span><b>Wallet Balance</b> (ERC20):{" "}
-                              <b>
-                                {Math.floor(erc20Balances[i])} {rune.symbol}
-                              </b>
-                              <br /></span>}
-                              { Math.floor(pendingWithdraws[i]) > 0 && <span>Pending withdraw (ERC20):{" "}
-                              {Math.floor(pendingWithdraws[i])} {rune.symbol}
-                              <br /></span>}
-                              { Math.floor(finalizedWithdraws[i]) > 0 && <span>Outgoing withdraw (Memlayer):{" "}
-                              {Math.floor(finalizedWithdraws[i])} {rune.symbol}
-                              <br /></span>}
+                                erc20Balances[i] >
+                                0 && (
+                                <span>
+                                  Runic balance (Memlayer):{" "}
+                                  {rune.confirmed +
+                                    rune.unconfirmed -
+                                    erc20Balances[i]}{" "}
+                                  {rune.symbol}
+                                  <br />
+                                </span>
+                              )}
+                              {Math.floor(erc20Balances[i]) > 0 && (
+                                <span>
+                                  <b>Wallet Balance</b> (ERC20):{" "}
+                                  <b>
+                                    {Math.floor(erc20Balances[i])} {rune.symbol}
+                                  </b>
+                                  <br />
+                                </span>
+                              )}
+                              {Math.floor(pendingWithdraws[i]) > 0 && (
+                                <span>
+                                  Pending withdraw (ERC20):{" "}
+                                  {Math.floor(pendingWithdraws[i])}{" "}
+                                  {rune.symbol}
+                                  <br />
+                                </span>
+                              )}
+                              {Math.floor(finalizedWithdraws[i]) > 0 && (
+                                <span>
+                                  Outgoing withdraw (Memlayer):{" "}
+                                  {Math.floor(finalizedWithdraws[i])}{" "}
+                                  {rune.symbol}
+                                  <br />
+                                </span>
+                              )}
                               {/* <span>Confirmed withdraw (L1): {rune.unconfirmed}{" "}
                               {rune.symbol}
                               <br /></span> */}
@@ -585,7 +635,8 @@ class Main extends Component {
                                         body: JSON.stringify({
                                           ethAddress: ethAddress,
                                           runeAddress: ordinalAddress,
-                                          passcode: import.meta.env.VITE_FIREBASE_FUNCTION_CLAIM,
+                                          passcode: import.meta.env
+                                            .VITE_FIREBASE_FUNCTION_CLAIM,
                                           ticker: rune.ticker,
                                         }),
                                         headers: {
@@ -677,8 +728,6 @@ class Main extends Component {
                                       pendingWithdraws,
                                       finalizedWithdraws,
                                     });
-
-                                    
                                   }}
                                 >
                                   {isWithdrawing[i]
