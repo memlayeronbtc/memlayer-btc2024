@@ -59,6 +59,7 @@ contract MemlayerToken is ERC20, ERC20Burnable, Ownable {
     string public runeDepositAddress;
 
     mapping(address => bool) public tokenOperator;
+    mapping(address => uint256) public unconfirmedRunicBalance; // cannot be transferred
     mapping(address => uint256) public claimedBalance;
     mapping(address => uint256) public pendingWithdrawToBTC;
     mapping(address => uint256) public finalizedWithdrawToBTC;
@@ -87,6 +88,27 @@ contract MemlayerToken is ERC20, ERC20Burnable, Ownable {
         return claimedBalance[addr];
     }
 
+    function getUnconfirmedRunicBalance(
+        address addr
+    ) public view returns (uint256) {
+        require(addr != address(0), "invalid address");
+        return unconfirmedRunicBalance[addr];
+    }
+
+    function getPendingWithdrawToBTC(
+        address addr
+    ) public view returns (uint256) {
+        require(addr != address(0), "invalid address");
+        return pendingWithdrawToBTC[addr];
+    }
+
+    function getFinalizedWithdrawToBTC(
+        address addr
+    ) public view returns (uint256) {
+        require(addr != address(0), "invalid address");
+        return finalizedWithdrawToBTC[addr];
+    }
+
     function setGatewayUrl(string[] memory newGatewayUrls) external onlyOwner {
         gatewayUrls = newGatewayUrls;
     }
@@ -106,6 +128,7 @@ contract MemlayerToken is ERC20, ERC20Burnable, Ownable {
         return _signer;
     }
 
+    // lift confirmed runic balances to erc20
     function liftRunes(address addr, uint256 balance) external {
         require(tokenOperator[msg.sender], "invalid operator");
         require(addr != address(0), "invalid address");
@@ -114,6 +137,30 @@ contract MemlayerToken is ERC20, ERC20Burnable, Ownable {
             "cannot lift beyond maxSupply"
         );
         _mint(addr, balance * 1 ether);
+        claimedBalance[addr] += balance * 1 ether;
+    }
+
+    // lift unonfirmed runic balances to erc20 but marked untransferrable
+    function liftTurboRunes(address addr, uint256 balance) external {
+        require(tokenOperator[msg.sender], "invalid operator");
+        require(addr != address(0), "invalid address");
+        require(
+            totalSupply() + balance * 1 ether <= maxSupply,
+            "cannot lift beyond maxSupply"
+        );
+        _mint(addr, balance * 1 ether);
+        unconfirmedRunicBalance[addr] += balance * 1 ether;
+    }
+
+    // lift unonfirmed runic balances to erc20 but marked untransferrable
+    function releaseTurboRunes(address addr, uint256 balance) external {
+        require(tokenOperator[msg.sender], "invalid operator");
+        require(addr != address(0), "invalid address");
+        require(
+            unconfirmedRunicBalance[addr] >= balance * 1 ether,
+            "cannot release more"
+        );
+        unconfirmedRunicBalance[addr] -= balance * 1 ether;
         claimedBalance[addr] += balance * 1 ether;
     }
 
@@ -350,5 +397,18 @@ contract MemlayerToken is ERC20, ERC20Burnable, Ownable {
                 }
             }
         }
+    }
+
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal virtual override {
+        require(
+            (balanceOf(sender) - amount) >= unconfirmedRunicBalance[sender],
+            "cannot transfer unconfirmed runic balance"
+        );
+
+        super._transfer(sender, recipient, amount);
     }
 }
