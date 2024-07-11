@@ -118,28 +118,61 @@ class Main extends Component {
   };
 
   onConnectAccountClick = async () => {
-    try {
-      const response = await request("getAccounts", {
-        purposes: [AddressPurpose.Ordinals],
-        message: "Memlayer",
-      });
-      if (response.status === "success") {
-        const ordinalsAddressItem = response.result.find(
-          (address) => address.purpose === AddressPurpose.Ordinals,
-        );
-        const ordinalAddress = ordinalsAddressItem?.address;
-        // const ordinalPubkey = ordinalsAddressItem?.publicKey;
+    // try {
+    const response = await request("getAccounts", {
+      purposes: [AddressPurpose.Ordinals],
+      message: "Memlayer",
+    });
+    if (response.status === "success") {
+      const ordinalsAddressItem = response.result.find(
+        (address) => address.purpose === AddressPurpose.Ordinals,
+      );
+      const ordinalAddress = ordinalsAddressItem?.address;
+      // const ordinalPubkey = ordinalsAddressItem?.publicKey;
 
-        if (ordinalAddress) {
+      if (ordinalAddress) {
+        this.setState({
+          ordinalAddress,
+        });
+        const ethAddress = this.state.ethAddress;
+        const res = await fetch(
+          `${serverUrl}/getoffchainpairing?ethAddress=${ethAddress}&runeAddress=${ordinalAddress}`,
+        );
+        const resJson = await res.json();
+
+        if (resJson && resJson.success) {
+          const { erc20Balances, pendingWithdraws, finalizedWithdraws } =
+            await this.refreshErc20Balances(ethAddress, resJson.runes);
+
           this.setState({
-            ordinalAddress,
+            accountLinked: true,
+            runes: resJson.runes,
+            erc20Balances,
+            pendingWithdraws,
+            finalizedWithdraws,
+            isClaiming: Array.from(
+              { length: resJson.runes.length },
+              () => false,
+            ),
+            isWithdrawing: Array.from(
+              { length: resJson.runes.length },
+              () => false,
+            ),
+            hasClaimableCredits: resJson.hasClaimableCredits,
           });
-          const ethAddress = this.state.ethAddress;
-          const res = await fetch(
-            `${serverUrl}/getoffchainpairing?ethAddress=${ethAddress}&runeAddress=${ordinalAddress}`,
-          );
+        } else {
+          const res = await fetch(`${serverUrl}/pairing`, {
+            method: "POST",
+            body: JSON.stringify({
+              ethAddress: ethAddress,
+              runeAddress: ordinalAddress,
+              passcode: import.meta.env.VITE_FIREBASE_FUNCTION_PAIRING,
+            }),
+            headers: {
+              "Content-type": "application/json; charset=UTF-8",
+            },
+          });
           const resJson = await res.json();
-          console.log(resJson);
           if (resJson && resJson.success) {
             const { erc20Balances, pendingWithdraws, finalizedWithdraws } =
               await this.refreshErc20Balances(ethAddress, resJson.runes);
@@ -160,24 +193,21 @@ class Main extends Component {
               ),
               hasClaimableCredits: resJson.hasClaimableCredits,
             });
-          } else {
-            this.setState({
-              accountChecked: true,
-            });
           }
         }
-      } else {
-        if (response.error) {
-          alert("Error getting accounts. Check console for error logs");
-          console.error(response.error);
-        }
       }
-    } catch (error) {
-      this.setState({
-        noXverse: true,
-      });
-      console.log("plz setup your Xverse wallet");
+    } else {
+      if (response.error) {
+        alert("Error getting accounts. Check console for error logs");
+        console.error(response.error);
+      }
     }
+    // } catch (error) {
+    //   this.setState({
+    //     noXverse: true,
+    //   });
+    //   console.log("plz setup your Xverse wallet");
+    // }
   };
 
   // TODO: switch chain when withdrawing
@@ -256,19 +286,31 @@ class Main extends Component {
             >
               <div className="pt-32 pb-12 md:pt-20 md:pb-20">
                 <div className="max-w-3xl mx-auto text-center mb-4">
-                  <center>
+                  <center data-aos="fade-up" data-aos-delay="200">
                     <img src={logo} width={"128px"} />
                   </center>
                   <br />
 
-                  <h1 className="h4 mb-0" data-aos="fade-up">
+                  <h1
+                    className="h4 mb-0"
+                    data-aos="fade-up"
+                    data-aos-delay="400"
+                  >
                     memlayer
                   </h1>
 
-                  <a href={`https://x.com/memlayer`}>@memlayer</a>
+                  <a
+                    data-aos="fade-up"
+                    data-aos-delay="500"
+                    href={`https://x.com/memlayer`}
+                  >
+                    @memlayer
+                  </a>
                   <br />
                   <br />
-                  <p>BTC mempool rune TXs lifted to EVM chains</p>
+                  <p data-aos="fade-up" data-aos-delay="600">
+                    BTC mempool rune TXs lifted to EVM chains
+                  </p>
                 </div>
                 <center>
                   <div className="relative max-w-xl mx-auto px-4 sm:px-6">
@@ -295,7 +337,7 @@ class Main extends Component {
                       ) : (
                         <div>
                           {signupState === 0 ? (
-                            <div>
+                            <div data-aos="fade-up" data-aos-delay="700">
                               <button
                                 style={{ cursor: "pointer" }}
                                 className="btn text-sm text-slate-200 border border-slate-100 shadow-sm mt-3 mb-1 w-80"
@@ -307,19 +349,17 @@ class Main extends Component {
                               >
                                 {`Early Access`}
                               </button>
-                              <div
-                                data-aos="fade-up"
-                                data-aos-delay="2000"
-                              ></div>
-                              <a
-                                href="https://b.tc/conference/2024/bitcoin-games"
-                                target="_blank"
-                              >
-                                <img
-                                  style={{ marginTop: "30px", width: "72px" }}
-                                  src={btcgamelogo}
-                                />
-                              </a>
+                              <div data-aos="fade-up" data-aos-delay="1000">
+                                <a
+                                  href="https://b.tc/conference/2024/bitcoin-games"
+                                  target="_blank"
+                                >
+                                  <img
+                                    style={{ marginTop: "30px", width: "72px" }}
+                                    src={btcgamelogo}
+                                  />
+                                </a>
+                              </div>
                             </div>
                           ) : (
                             <div>
@@ -330,7 +370,7 @@ class Main extends Component {
                                     : "not-allowed",
                                 }}
                                 disabled={canSignup}
-                                className={`btn text-sm text-slate-${canSignup ? 300 : 100} border border-slate-${canSignup ? 300 : 100} shadow-sm mt-3 mb-1 w-80`}
+                                className={`btn text-sm text-slate-100 border border-slate-100 shadow-sm mt-3 mb-1 w-80`}
                                 onClick={() => {
                                   this.getEthAddress();
                                 }}
@@ -351,7 +391,7 @@ class Main extends Component {
                                     : "not-allowed",
                                 }}
                                 disabled={!ethAddress}
-                                className={`btn text-sm text-slate-${ethAddress ? 100 : 400} border border-slate-${ethAddress ? 100 : 400} shadow-sm mt-3 mb-1 w-80`}
+                                className={`btn text-sm text-slate-100 border border-slate-100 shadow-sm mt-3 mb-1 w-80`}
                                 onClick={() => {
                                   if (noXverse) {
                                     alert("plz install Xverse wallet");
@@ -372,59 +412,17 @@ class Main extends Component {
                                   `Connect Xverse`
                                 )}
                               </button>
-                              <button
-                                disabled={
-                                  !ethAddress || !canSignup || isClicked
-                                }
-                                style={{
-                                  cursor: canSignup ? "pointer" : "not-allowed",
-                                }}
-                                className={`btn text-sm text-slate-${canSignup ? 100 : 400} border border-slate-${canSignup ? 100 : 400} shadow-sm mt-3 mb-1 w-80`}
-                                onClick={async () => {
-                                  this.setState({
-                                    isClicked: true,
-                                  });
-                                  console.log(
-                                    `link ${ethAddress} and ${ordinalAddress}`,
-                                  );
-                                  const res = await fetch(
-                                    `${serverUrl}/pairing`,
-                                    {
-                                      method: "POST",
-                                      body: JSON.stringify({
-                                        ethAddress: ethAddress,
-                                        runeAddress: ordinalAddress,
-                                        passcode: import.meta.env
-                                          .VITE_FIREBASE_FUNCTION_PAIRING,
-                                      }),
-                                      headers: {
-                                        "Content-type":
-                                          "application/json; charset=UTF-8",
-                                      },
-                                    },
-                                  );
-                                  const resJson = await res.json();
-                                  console.log(resJson);
-                                  if (resJson.success) {
-                                    this.setState({
-                                      accountLinked: true,
-                                    });
-                                  }
-                                }}
-                              >
-                                {isClicked
-                                  ? `Processing...`
-                                  : `Sign Up (gas less)`}
-                              </button>
+
                               <p
                                 style={{
                                   fontSize: "small",
-                                  marginTop: "5px",
+                                  marginTop: "15px",
                                   color: "pink",
                                 }}
                               >
-                                Linking addresses is required for memlayer
-                                lifting.
+                                {!(ethAddress && ordinalAddress)
+                                  ? `BTC & ETH addresses are both required for memlayer lifting.`
+                                  : `Loading...`}
                               </p>
                             </div>
                           )}
@@ -453,11 +451,21 @@ class Main extends Component {
                           {import.meta.env.VITE_RUNE_DEPOSIT_ADDRESS}
                         </b>
                         <br />
-                        <span style={{ color: "red", fontSize: "small" }}>
+                        <span style={{ color: "yellow", fontSize: "small" }}>
                           Only send 'whitelisted' runes FROM your BTC ord
                           address
                         </span>
                         <br />
+                        {runes.map((rune, i) => (
+                          <p key={`sp${rune.ticker}z`}>
+                            <a
+                              href={`https://ordinals.com/rune/${rune.number}`}
+                              style={{ textDecoration: "underline" }}
+                            >
+                              <b style={{ fontSize: "small" }}>{rune.ticker}</b>
+                            </a>
+                          </p>
+                        ))}
                         <br />
                         <hr />
                         <p style={{ fontSize: "smaller" }}>
@@ -685,7 +693,7 @@ class Main extends Component {
                           <button
                             // style={{ cursor: canClaim ? "pointer" : "not-allowed" }}
                             disabled={isRefreshing}
-                            className={`btn text-sm text-slate-100 border border-slate-100 shadow-sm mt-3 mb-1 w-80`}
+                            className={`btn text-sm text-slate-100 border border-slate-100 shadow-sm mt-5 mb-1 w-80`}
                             onClick={async () => {
                               this.setState({
                                 isRefreshing: true,
