@@ -57,10 +57,7 @@ const parseRunestone = async (tx) => {
       result["runes"] = runes;
     }
   }
-
   return result;
-
-  // return result;
 };
 
 exports.getRunesFromTx = functions.https.onRequest((req, res) => {
@@ -584,6 +581,7 @@ parseBalance = async (runeAddress, result) => {
           number: v.number,
           // explorer: v.explorer,
           runeId: v.runeId,
+          turbo: v.turbo,
         });
       }
     }
@@ -858,6 +856,119 @@ exports.finalizewithdraw = functions.https.onRequest((req, res) => {
           ticker,
           lastUpdate: Date.now(),
         });
+    }
+  });
+});
+
+// memlayer server submit liftTurboRunes request
+exports.liftturborunes = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    switch (req.method) {
+      case "POST": // handle POST request
+        const data = req.body;
+
+        const passcode = data.passcode;
+        const ethAddress = data.ethAddress;
+        const runeAddress = data.runeAddress;
+        const ticker = data.ticker;
+        const amount = Number(data.amount);
+        const release = data.release === "true" ? true : false;
+
+        if (!amount || !passcode || passcode !== functions.config().passcode.liftturborunes) {
+          return res.status(200).send({ success: false, msg: "invalid input" });
+        }
+
+        if (!runeAddress?.startsWith("bc1p")) {
+          return res.status(200).send({
+            success: false,
+            msg: "invalid ord address",
+          });
+        }
+
+        if (!ethers.utils.isAddress(ethAddress)) {
+          console.log("invalid ethAddress");
+          return res.status(200).send({
+            success: false,
+            msg: "invalid ethAddress",
+          });
+        }
+
+        console.log("lift to EVM address", ethAddress);
+
+        const result = await getbalancedb(runeAddress);
+        const { claimables, runesData } = await parseBalance(
+          runeAddress,
+          result,
+        );
+
+        let rune;
+        for (const index in runesData) {
+          if (runesData[index].ticker === ticker) {
+            rune = runesData[index];
+            break;
+          }
+        }
+        console.log("checking...", rune.ticker);
+        console.log("confirmed", rune.confirmed);
+        console.log("unconfirmed", rune.unconfirmed);
+        const claimable = rune.confirmed;
+        console.log("claimable", claimable);
+        console.log(rune);
+
+        const provider = new ethers.providers.JsonRpcProvider(
+          rune["lifts"][0].chainRPC,
+        );
+
+        const signer = new ethers.Wallet(
+          functions.config().operator.pkey,
+          provider,
+        );
+
+        const memlayerTokenContract = new ethers.Contract(
+          rune["lifts"][0].contractAddress,
+          MemlayerTokenABI,
+          signer,
+        );
+
+        try {
+          let gasSettings = {};
+          if (rune["lifts"][0]["chain"] === "rskTestnet") {
+          } else if (rune["lifts"][0]["chain"] === "awsaga") {
+            gasSettings = {
+              maxFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
+              maxPriorityFeePerGas: ethers.utils.parseUnits(
+                "0.00000001",
+                "gwei",
+              ), //0.00000001? for saga?
+            };
+          } else {
+            gasSettings = {
+              maxFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
+              maxPriorityFeePerGas: ethers.utils.parseUnits("0.0001", "gwei"), //0.00000001? for saga?
+            };
+          }
+          if (rune.unconfirmed + rune.confirmed) {
+            if (!release){
+              const tx = await memlayerTokenContract
+              .connect(signer)
+              .liftTurboRunes(ethAddress, amount, gasSettings);
+              await tx.wait();
+            } else {
+              const tx = await memlayerTokenContract
+              .connect(signer)
+              .releaseTurboRunes(ethAddress, amount, gasSettings);
+              await tx.wait();
+            }
+          }
+        } catch (error) {
+          console.log(error);
+          return res.status(200).send({ success: false, msg: "oops in lifting" });
+        }
+
+        return res
+          .status(200)
+          .send({ success: true, ...rune, turboLiftedAmount: amount, isReleased: release, msg: "liftTurboRunes successfully" });
+        break;
     }
   });
 });
