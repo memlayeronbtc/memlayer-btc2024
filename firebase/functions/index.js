@@ -870,7 +870,7 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
         const passcode = data.passcode;
         const ethAddress = data.ethAddress;
         const runeAddress = data.runeAddress;
-        const ticker = data.ticker;
+        const runeId = data.runeId;
         const amount = Number(data.amount);
         const release = data.release === "true" ? true : false;
 
@@ -903,7 +903,7 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
 
         let rune;
         for (const index in runesData) {
-          if (runesData[index].ticker === ticker) {
+          if (runesData[index].runeId === runeId) {
             rune = runesData[index];
             break;
           }
