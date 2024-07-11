@@ -60,7 +60,7 @@ class Main extends Component {
         // event with a null oldNetwork along with the newNetwork. So, if the
         // oldNetwork exists, it represents a changing network
         if (oldNetwork) {
-          window.location.reload();
+          //window.location.reload();
         }
       });
 
@@ -129,21 +129,35 @@ class Main extends Component {
       );
       const ordinalAddress = ordinalsAddressItem?.address;
       // const ordinalPubkey = ordinalsAddressItem?.publicKey;
+      const ethAddress = this.state.ethAddress;
 
-      if (ordinalAddress) {
+      if (ordinalAddress && ethAddress) {
         this.setState({
           ordinalAddress,
+          ethAddress,
         });
-        const ethAddress = this.state.ethAddress;
-        const res = await fetch(
-          `${serverUrl}/getoffchainpairing?ethAddress=${ethAddress}&runeAddress=${ordinalAddress}`,
-        );
-        const resJson = await res.json();
-
-        if (resJson && resJson.success) {
+        
+        // always pair first
+        const res0 = await fetch(`${serverUrl}/pairing`, {
+          method: "POST",
+          body: JSON.stringify({
+            ethAddress: ethAddress,
+            runeAddress: ordinalAddress,
+            passcode: import.meta.env.VITE_FIREBASE_FUNCTION_PAIRING,
+          }),
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+        });
+        const resJson0 = await res0.json();
+        if (resJson0 && resJson0.success) {
+          const res = await fetch(
+            `${serverUrl}/getoffchainpairing?ethAddress=${ethAddress}&runeAddress=${ordinalAddress}`,
+          );
+          const resJson = await res.json();
           const { erc20Balances, pendingWithdraws, finalizedWithdraws } =
             await this.refreshErc20Balances(ethAddress, resJson.runes);
-
+          console.log(resJson.runes)
           this.setState({
             accountLinked: true,
             runes: resJson.runes,
@@ -160,40 +174,6 @@ class Main extends Component {
             ),
             hasClaimableCredits: resJson.hasClaimableCredits,
           });
-        } else {
-          const res = await fetch(`${serverUrl}/pairing`, {
-            method: "POST",
-            body: JSON.stringify({
-              ethAddress: ethAddress,
-              runeAddress: ordinalAddress,
-              passcode: import.meta.env.VITE_FIREBASE_FUNCTION_PAIRING,
-            }),
-            headers: {
-              "Content-type": "application/json; charset=UTF-8",
-            },
-          });
-          const resJson = await res.json();
-          if (resJson && resJson.success) {
-            const { erc20Balances, pendingWithdraws, finalizedWithdraws } =
-              await this.refreshErc20Balances(ethAddress, resJson.runes);
-
-            this.setState({
-              accountLinked: true,
-              runes: resJson.runes,
-              erc20Balances,
-              pendingWithdraws,
-              finalizedWithdraws,
-              isClaiming: Array.from(
-                { length: resJson.runes.length },
-                () => false,
-              ),
-              isWithdrawing: Array.from(
-                { length: resJson.runes.length },
-                () => false,
-              ),
-              hasClaimableCredits: resJson.hasClaimableCredits,
-            });
-          }
         }
       }
     } else {
@@ -210,7 +190,28 @@ class Main extends Component {
     // }
   };
 
-  // TODO: switch chain when withdrawing
+  addErc20ToWallet = async (
+    tokenAddress,
+    tokenSymbol,
+    tokenDecimals,
+    tokenIcon
+  ) => {
+    const wasAdded = await ethereum.request({
+      method: 'wallet_watchAsset',
+      params: {
+        type: 'ERC20',
+        options: {
+          address: tokenAddress,
+          symbol: tokenSymbol,
+          decimals: tokenDecimals,
+          image: tokenIcon
+        },
+      },
+    });
+    return wasAdded;
+  }
+
+  // switch chain when withdrawing
   addChainToWallet = async (
     chainId,
     chainName,
@@ -303,6 +304,7 @@ class Main extends Component {
                     data-aos="fade-up"
                     data-aos-delay="500"
                     href={`https://x.com/memlayer`}
+                    target="_blank"
                   >
                     @memlayer
                   </a>
@@ -422,7 +424,7 @@ class Main extends Component {
                               >
                                 {!(ethAddress && ordinalAddress)
                                   ? `BTC & ETH addresses are both required for memlayer lifting.`
-                                  : `Loading...`}
+                                  : `linking addresses...`}
                               </p>
                             </div>
                           )}
@@ -434,7 +436,10 @@ class Main extends Component {
                         <br />
                         <span style={{ fontSize: "smaller" }}>
                           BTC ord Address:
-                          <br /> {ordinalAddress}✔️
+                          <br /> <a
+                              href={`https://mempool.space/address/${ordinalAddress}`} target="_blank"
+                              style={{ textDecoration: "underline" }}
+                            >{ordinalAddress}</a>✔️
                         </span>
                         <br />
                         <br />
@@ -461,6 +466,7 @@ class Main extends Component {
                             <a
                               href={`https://ordinals.com/rune/${rune.number}`}
                               style={{ textDecoration: "underline" }}
+                              target="_blank"
                             >
                               <b style={{ fontSize: "small" }}>{rune.ticker}</b>
                             </a>
@@ -497,6 +503,7 @@ class Main extends Component {
                               <a
                                 href={`https://ordinals.com/rune/${rune.number}`}
                                 style={{ textDecoration: "underline" }}
+                                target="_blank"
                               >
                                 BTC{" "}
                               </a>
@@ -504,9 +511,26 @@ class Main extends Component {
                               <a
                                 href={`${rune.lifts[0].explorer}/address/${rune.lifts[0].contractAddress}`}
                                 style={{ textDecoration: "underline" }}
+                                target="_blank"
                               >
                                 {rune.lifts[0].chain}
-                              </a>
+                              </a><span style={{marginLeft: "3px"}}>(<span style={{textDecoration: "underline", cursor: "pointer"}} onClick={async()=>{
+                                await this.addChainToWallet(
+                                  rune["lifts"][0].chainId,
+                                  rune["lifts"][0].chain,
+                                  rune["lifts"][0].chainRPC,
+                                  rune["lifts"][0].iconUri,
+                                  rune["lifts"][0].ticker,
+                                  rune["lifts"][0].ticker,
+                                  18,
+                                  rune["lifts"][0].explorer,
+                                );
+                                this.addErc20ToWallet(
+                                  rune.lifts[0].contractAddress,
+                                  rune.ticker.substring(0,3),
+                                  18,null
+                                )
+                              }}>add</span>)</span>
                               <br />
                               {rune.confirmed > 0 && (
                                 <span>
@@ -656,6 +680,18 @@ class Main extends Component {
                                         MemlayerTokenABI,
                                         signer,
                                       );
+
+                                    await this.addChainToWallet(
+                                      rune["lifts"][0].chainId,
+                                      rune["lifts"][0].chain,
+                                      rune["lifts"][0].chainRPC,
+                                      rune["lifts"][0].iconUri,
+                                      rune["lifts"][0].ticker,
+                                      rune["lifts"][0].ticker,
+                                      18,
+                                      rune["lifts"][0].explorer,
+                                    );
+
                                     const tx =
                                       await memlayerTokenContract.withdrawToBTC(
                                         ethers.utils.parseUnits("100", "ether"),
@@ -680,8 +716,8 @@ class Main extends Component {
                                   }}
                                 >
                                   {isWithdrawing[i]
-                                    ? `Initiating withdraw...`
-                                    : `Withdraw`}
+                                    ? `Requesting L1 withdraw...`
+                                    : `Withdraw TX`}
                                 </button>
                               )}
                               <br />
