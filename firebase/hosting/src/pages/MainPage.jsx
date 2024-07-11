@@ -1,11 +1,7 @@
 import React, { Component } from "react";
 import { Link } from "react-router-dom";
 import { ethers } from "ethers";
-import {
-  AddressPurpose,
-  request,
-  // Wallet
-} from "sats-connect";
+import { AddressPurpose, request } from "sats-connect";
 import logo from "../images/memlayerlogo512transparent.png";
 import btcgamelogo from "../images/bgames_logo.svg";
 import MemlayerTokenABI from "../abi/MemlayerTokenABI.json";
@@ -122,147 +118,113 @@ class Main extends Component {
   };
 
   onConnectAccountClick = async () => {
-    // try {
-    const response = await request("getAccounts", {
-      purposes: [AddressPurpose.Ordinals],
-      message: ".runescape",
-    });
-    // console.log("getAccounts ~ response:", response)
-    if (response.status === "success") {
-      const ordinalsAddressItem = response.result.find(
-        (address) => address.purpose === AddressPurpose.Ordinals,
-      );
-      const ordinalAddress = ordinalsAddressItem?.address;
-      // const ordinalPubkey = ordinalsAddressItem?.publicKey;
-
-      if (ordinalAddress) {
-        this.setState({
-          ordinalAddress,
-        });
-        const ethAddress = this.state.ethAddress;
-        const res = await fetch(
-          `${serverUrl}/getoffchainpairing?ethAddress=${ethAddress}&runeAddress=${ordinalAddress}`,
+    try {
+      const response = await request("getAccounts", {
+        purposes: [AddressPurpose.Ordinals],
+        message: "Memlayer",
+      });
+      if (response.status === "success") {
+        const ordinalsAddressItem = response.result.find(
+          (address) => address.purpose === AddressPurpose.Ordinals,
         );
-        const resJson = await res.json();
-        console.log(resJson);
-        if (resJson && resJson.success) {
-          const { erc20Balances, pendingWithdraws, finalizedWithdraws } =
-            await this.refreshErc20Balances(ethAddress, resJson.runes);
+        const ordinalAddress = ordinalsAddressItem?.address;
+        // const ordinalPubkey = ordinalsAddressItem?.publicKey;
 
+        if (ordinalAddress) {
           this.setState({
-            accountLinked: true,
-            runes: resJson.runes,
-            erc20Balances,
-            pendingWithdraws,
-            finalizedWithdraws,
-            isClaiming: Array.from(
-              { length: resJson.runes.length },
-              () => false,
-            ),
-            isWithdrawing: Array.from(
-              { length: resJson.runes.length },
-              () => false,
-            ),
-            hasClaimableCredits: resJson.hasClaimableCredits,
+            ordinalAddress,
           });
-        } else {
-          this.setState({
-            accountChecked: true,
-          });
+          const ethAddress = this.state.ethAddress;
+          const res = await fetch(
+            `${serverUrl}/getoffchainpairing?ethAddress=${ethAddress}&runeAddress=${ordinalAddress}`,
+          );
+          const resJson = await res.json();
+          console.log(resJson);
+          if (resJson && resJson.success) {
+            const { erc20Balances, pendingWithdraws, finalizedWithdraws } =
+              await this.refreshErc20Balances(ethAddress, resJson.runes);
+
+            this.setState({
+              accountLinked: true,
+              runes: resJson.runes,
+              erc20Balances,
+              pendingWithdraws,
+              finalizedWithdraws,
+              isClaiming: Array.from(
+                { length: resJson.runes.length },
+                () => false,
+              ),
+              isWithdrawing: Array.from(
+                { length: resJson.runes.length },
+                () => false,
+              ),
+              hasClaimableCredits: resJson.hasClaimableCredits,
+            });
+          } else {
+            this.setState({
+              accountChecked: true,
+            });
+          }
+        }
+      } else {
+        if (response.error) {
+          alert("Error getting accounts. Check console for error logs");
+          console.error(response.error);
         }
       }
-    } else {
-      if (response.error) {
-        alert("Error getting accounts. Check console for error logs");
-        console.error(response.error);
-      }
-    }
-
-    // } catch (error) {
-    //   this.setState({
-    //     noXverse: true
-    //   })
-    //   console.log("plz setup your Xverse wallet")
-    // }
-  };
-
-  /*
-  connectAndTransferAPE = async () => {
-    try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x1' }], // eth
-        });
-      const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-      // Prompt user for account connections
-      await provider.send("eth_requestAccounts", []);
-      const signer = provider.getSigner();
-      //console.log("Account:", await signer.getAddress());
-    
-      const CONTRACT_ADDRESS = "0x4d224452801aced8b2f0aebe155379bb5d594381"; // ApeCoin
-      const DECIMALS = 18;
-    
-      const abi = ["function transfer(address to, uint amount)"];
-    
-      const erc20 = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
-    
-      const transferToAddress = "0xD7658ebd7754670F82b1fCbD227E199D714584E4"; // anotherdeed.eth
-    
-      const amount = ethers.utils.parseUnits("100", DECIMALS);
-      await erc20.transfer(transferToAddress, amount);
-      
     } catch (error) {
-      window.location.reload();
+      this.setState({
+        noXverse: true,
+      });
+      console.log("plz setup your Xverse wallet");
     }
-    
   };
-  */
-  /*
-  addApeChainToWallet = async () => {
 
+  // TODO: switch chain when withdrawing
+  addChainToWallet = async (
+    chainId,
+    chainName,
+    rpcUri,
+    iconUri,
+    ticker,
+    symbol,
+    decimals,
+    explorerUri,
+  ) => {
     try {
       await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
+        method: "wallet_switchEthereumChain",
         // chainId must be in HEX with 0x in front
-        //params: [{ chainId: '0x5' }], // goerli
-        //params: [{ chainId: '0x385' }], // awl2
-        //params: [{ chainId: '0xa' }], // op
-        params: [{ chainId: '0x6F' }], // apechain test
-        });
-      
+        params: [{ chainId: chainId }],
+      });
     } catch (error) {
       // This error code indicates that the chain has not been added to MetaMask.
-  if (error.code === 4902) {
-    try {
-      await window.ethereum.request({
-        method: 'wallet_addEthereumChain',
-        params: [
-          {
-            chainId: '0x6F',
-            chainName: 'ApeChain Testnet',
-            rpcUrls: ['https://l2-apechain-test-qbuapbatak.t.conduit.xyz'],
-            iconUrls: [
-              "https://ipfs.io/ipfs/QmXd5Wy5bosm4M1ne7ChWS4xT1jbCiQVGPSWSjbLae4Fqn"
+      if (error.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                chainId,
+                chainName,
+                rpcUrls: [rpcUri],
+                iconUrls: [iconUri],
+                nativeCurrency: {
+                  name: ticker,
+                  symbol: symbol,
+                  decimals: decimals ? decimals : 18,
+                },
+                blockExplorerUrls: [explorerUri],
+              },
             ],
-            nativeCurrency: {
-              "name": "ETH",
-              "symbol": "ETH",
-              "decimals": 18
-            },
-            blockExplorerUrls: [
-              "https://explorerl2-apechain-test-qbuapbatak.t.conduit.xyz/"
-            ]
-          },
-        ],
-      });
-    } catch (addError) {
-      // handle "add" error
+          });
+        } catch (addError) {
+          // handle "add" error
+        }
+      }
     }
-  }
-    }
-    
-  }
-*/
+  };
+
   render() {
     const {
       isClicked,
@@ -282,36 +244,17 @@ class Main extends Component {
       finalizedWithdraws,
     } = this.state;
     const canSignup =
-      ordinalAddress &&
-      ethAddress &&
-      accountChecked &&
-      accountChecked &&
-      !accountLinked;
-    // console.log(erc20Balances)
+      ordinalAddress && ethAddress && accountChecked && !accountLinked;
     return (
       <div className="flex flex-col min-h-screen overflow-hidden">
         <main className="grow">
           <section className="relative">
-            {/* Illustration */}
-            {/* <div
-              className="md:block absolute left-1/2 -translate-x-1/2 pointer-events-none -z-10"
-              aria-hidden="true"
-            >
-              <img
-                src={Illustration}
-                className="max-w-none"
-                width="1440"
-                height="332"
-                alt="Page Illustration"
-              />
-            </div> */}
             <div
               className="relative max-w-6xl mx-auto px-4 sm:px-6"
               data-aos="fade-up"
               data-aos-delay="200"
             >
               <div className="pt-32 pb-12 md:pt-20 md:pb-20">
-                {/* Page header */}
                 <div className="max-w-3xl mx-auto text-center mb-4">
                   <center>
                     <img src={logo} width={"128px"} />
@@ -646,7 +589,6 @@ class Main extends Component {
                                       },
                                     );
                                     const resJson = await res.json();
-                                    // console.log(resJson);
                                     if (resJson.success) {
                                       const runes = this.state.runes;
                                       const {
@@ -700,7 +642,6 @@ class Main extends Component {
                                       [],
                                     );
                                     const signer = provider.getSigner();
-                                    // const provider = new ethers.providers.JsonRpcProvider(rune["lifts"][0].chainRPC);
                                     const memlayerTokenContract =
                                       new ethers.Contract(
                                         rune["lifts"][0].contractAddress,
