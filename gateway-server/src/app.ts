@@ -20,8 +20,6 @@ const memlayerABI = JSON.parse(
   fs.readFileSync(`${dataFolder}MemlayerToken.json`, 'utf8')
 ).abi;
 
-// const memlayerABI = require("../../firebase/functions/abi/MemlayerTokenABI.json");
-
 export async function initMempoolData() {
   const depositAddress = process.env.DEPOSIT_ADDRESS;
   const serverUrl = process.env.SERVERLESS_URI;
@@ -35,7 +33,7 @@ export async function initMempoolData() {
   // TODO: switch to a full node and watch mempool natively
   const ws = websocket.initServer({
     options: [
-      // "block"
+      "block"
     ],
   });
 
