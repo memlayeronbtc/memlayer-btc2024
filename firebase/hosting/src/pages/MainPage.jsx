@@ -431,7 +431,7 @@ class Main extends Component {
                                 }}
                               >
                                 {!(ethAddress && ordinalAddress)
-                                  ? `BTC & ETH addresses are both required for memlayer lifting.`
+                                  ? `BOTH BTC & ETH addresses are required.`
                                   : `linking addresses...`}
                               </p>
                             </div>
