@@ -73,6 +73,8 @@ Memlayer can be a great self-hosting middle layer between BTC L1 and EVM sidecha
 
 3. Make CCIP-read gateway more generic to access more BTC block data and mempool TXs
 
+4. Extend ERC-20 runes with points and gamification
+
 ## references
 - CCIP-read gateway https://github.com/smartcontractkit/
 - BTC ordinals https://docs.ordinals.com/
