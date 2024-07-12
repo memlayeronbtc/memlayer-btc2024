@@ -1,22 +1,20 @@
 # memlayer-btc2024
-a CCIP-read gateway to lift BTC runes to EVM erc20 directly from Mempool
+Memlayer lifts BTC runes to EVM erc20 directly from Mempool built with a BTC full node and CCIP-read gateway. This is a submission for the Bitcoin Games 2024 hackathon.
 
-## contracts
-erc20 contract reads mempool TXs via CCIP-read
+Memlayer makes BTC mempool TXs, blocks, and runes data accessible by smart contracts on EVM sidechains. For example, when a user deposit BTC runes to a BTC address, Memlayer lifts this TX to Rootstack, Alys, or other EVM chains so that the user can further utilize this rune as an ERC-20 token. Memlayer is built based on the Cross-Chain Interoperability Protocol (CCIP) as CCIP-read gateways on top of a BTC mempool and block data (e.g., a BTC full node). For BTC runes with TURBO flags, Memlayer instantly lifts the rune amount and distribute the ERC-20 amount but with a transfer limit till L1 deposit confirmation.
 
-## server
-CCIP-read gateway picks up mempool TXs and lifts runes to target EVM chain
+## evm-contracts
+This erc20 contract `MemlayerToken.sol` works together with the CCIP-read gateway server to process BTC rune deposit TXs from mempool. Unconfirmed rune deposits cannot be transferred and will be reverted.
 
-## client
-TS client interacts with a CCIP erc-20 contract
+## gateway-server
+This CCIP-read gateway server (deployed on AWS) picks up mempool TXs and lifts runes to EVM chains.
 
-## aws deployment
-1. download .zip from github
-2. scp into server, unzip replace all
-3. create `.env` once
-4. `nvm use 18`
-5. `pm2 delete [id]`
-6. `pm2 start "yarn start" --name memlayer --cron-restart="0 0 * * *"`
+## firebase hosting
+This is the front-end one-pager of the hackathon project website.
 
-## reference
-- https://github.com/smartcontractkit/ccip-read/tree/master/packages/examples/trusted-gateway-token
+## firebase functions
+These serverless functions handle TXs and store data on firebase real-time database
+
+## references
+- CCIP-read gateway https://github.com/smartcontractkit/ccip-read/tree/master/packages/examples/trusted-gateway-token
+- BTC ordinals https://docs.ordinals.com/
