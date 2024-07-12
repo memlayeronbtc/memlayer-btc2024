@@ -155,9 +155,17 @@ class Main extends Component {
             `${serverUrl}/getoffchainpairing?ethAddress=${ethAddress}&runeAddress=${ordinalAddress}`,
           );
           const resJson = await res.json();
+          for (let index = 0; index < resJson.runes.length; index++) {
+            const rune = resJson.runes[index];
+            if (rune.local){
+              resJson.runes.splice(index, 1);
+            }
+          }
+          console.log(resJson.runes);
           const { erc20Balances, pendingWithdraws, finalizedWithdraws } =
             await this.refreshErc20Balances(ethAddress, resJson.runes);
-          console.log(resJson.runes)
+          
+          
           this.setState({
             accountLinked: true,
             runes: resJson.runes,
