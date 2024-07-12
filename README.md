@@ -27,6 +27,8 @@ We created an **easy** and **fast** way to lift BTC runes to any EVM chains. Her
 4. The user sends the supported BTC runes to the BTC deposit address. As soon as this TX enters the mempool, Memlayer's CCIP gateway server picks it up 
 
 ## sidechain track challenges
+Memlayer addresses the following challenges:
+
 1. **Scalable Payment Solutions Challenge** - Using BTC runes for payments, games, or royalty rewards is not easy on the BTC L1 mainnet compared to using ERC-20 on EVM chains. Solving the utility problem of runes with sidechains can fuel growth for the whole BTC ecosystem. Memlayer makes lifting BTC runes to sidechains easy so more utilities can be built using EVM smart contracts.
 
 2. **Interoperability Tools Challenge** - Cross-chain interoperability is critical because there will be more sidechains. What would be the minimalist approach to have a protocol supporting multiple sidechains simultaneously? Memlayer supports smart contracts from multiple EVM sidechains for accessing BTC data with a single gateway server.
