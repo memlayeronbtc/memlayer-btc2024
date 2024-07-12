@@ -322,7 +322,7 @@ class Main extends Component {
                     data-aos="fade-up"
                     data-aos-delay="400"
                   >
-                    memlayer
+                    Memlayer
                   </h1>
 
                   <a
@@ -497,8 +497,10 @@ class Main extends Component {
                               style={{ textDecoration: "underline" }}
                               target="_blank"
                             >
-                              <b style={{ fontSize: "medium" }}>{rune.ticker}</b>
-                            </a><span style={{ fontSize: "small" }}>{` -> `}</span>{rune.explorer ? <a
+                              <b style={{ fontSize: "small" }}>{rune.ticker}</b>
+                            </a>
+                            {rune.turbo ? <span style={{ fontSize: "0.6em", color: "pink" }}>{` TURBO `}</span>:<span/>}
+                            <span style={{ fontSize: "small" }}>{` -> `}</span>{rune.explorer ? <a
                               href={`${rune.explorer}`}
                               style={{ textDecoration: "underline",fontSize: "small" }}
                               target="_blank"
@@ -506,7 +508,7 @@ class Main extends Component {
                           </p>
                         ))}
                         <br />
-                        <hr />
+                        {runes.length > 0 ? <hr /> : <div/>}
                         <p style={{ fontSize: "smaller" }}>
                           {runes.map((rune, i) => (
                             <span key={`sp${rune.ticker}`}>
