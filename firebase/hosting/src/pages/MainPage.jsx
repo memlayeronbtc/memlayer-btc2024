@@ -37,6 +37,7 @@ class Main extends Component {
       erc20Balances: [],
       pendingWithdraws: [],
       finalizedWithdraws: [],
+      whitelistedrunes: []
     };
   }
 
@@ -67,6 +68,8 @@ class Main extends Component {
       window.ethereum.on("accountsChanged", function (accounts) {
         window.location.reload();
       });
+
+      this.getWhitelistedRunes();
     }
   }
   componentWillUnmount() {
@@ -89,6 +92,20 @@ class Main extends Component {
       address.substring(address.length - 8, address.length)
     );
   };
+
+  getWhitelistedRunes = async () => {
+    const res = await fetch(
+      `${serverUrl}/whitelistedrunes`,
+    );
+    const resJson = await res.json();
+    if (resJson && resJson.success) {
+      const whitelistedrunes = resJson.runes;
+      // console.log(whitelistedrunes)
+      this.setState({
+        whitelistedrunes
+      })
+    }
+  }
 
   refreshErc20Balances = async (address, runes) => {
     const balances = Array.from({ length: runes.length }, () => 0);
@@ -161,7 +178,7 @@ class Main extends Component {
               resJson.runes.splice(index, 1);
             }
           }
-          console.log(resJson.runes);
+          // console.log(resJson.runes);
           const { erc20Balances, pendingWithdraws, finalizedWithdraws } =
             await this.refreshErc20Balances(ethAddress, resJson.runes);
           
@@ -266,7 +283,7 @@ class Main extends Component {
 
   render() {
     const {
-      isClicked,
+      whitelistedrunes,
       noXverse,
       ethAddress,
       signupState,
@@ -431,7 +448,7 @@ class Main extends Component {
                                 }}
                               >
                                 {!(ethAddress && ordinalAddress)
-                                  ? `BOTH BTC & ETH addresses are required.`
+                                  ? `Both BTC/ETH addresses are required.`
                                   : `linking addresses...`}
                               </p>
                             </div>
@@ -458,26 +475,34 @@ class Main extends Component {
                         </span>
                         <br />
                         <br />
-                        Rune deposit address:
+                        BTC rune deposit address:
                         <br />
                         <b style={{ fontSize: "small", color: "pink" }}>
-                          {import.meta.env.VITE_RUNE_DEPOSIT_ADDRESS}
+                        <a
+                              href={`https://mempool.space/address/${import.meta.env.VITE_RUNE_DEPOSIT_ADDRESS}`} target="_blank"
+                              style={{ textDecoration: "underline" }}
+                            >{import.meta.env.VITE_RUNE_DEPOSIT_ADDRESS}</a>
                         </b>
                         <br />
+                        <br />
                         <span style={{ color: "yellow", fontSize: "small" }}>
-                          Only send 'whitelisted' runes FROM your BTC ord
-                          address
+                          Only send the 'whitelisted' runes FROM your BTC ord
+                          address to deposit address
                         </span>
                         <br />
-                        {runes.map((rune, i) => (
+                        {whitelistedrunes.map((rune, i) => (
                           <p key={`sp${rune.ticker}z`}>
                             <a
                               href={`https://ordinals.com/rune/${rune.number}`}
                               style={{ textDecoration: "underline" }}
                               target="_blank"
                             >
-                              <b style={{ fontSize: "small" }}>{rune.ticker}</b>
-                            </a>
+                              <b style={{ fontSize: "medium" }}>{rune.ticker}</b>
+                            </a><span style={{ fontSize: "small" }}>{` -> `}</span>{rune.explorer ? <a
+                              href={`${rune.explorer}`}
+                              style={{ textDecoration: "underline",fontSize: "small" }}
+                              target="_blank"
+                            >{rune.chain}</a>:<span style={{ fontSize: "small" }}>{rune.chain}</span>}
                           </p>
                         ))}
                         <br />
@@ -747,7 +772,7 @@ class Main extends Component {
                                 `${serverUrl}/getoffchainpairing?ethAddress=${this.state.ethAddress}&runeAddress=${ordinalAddress}`,
                               );
                               const resJson = await res.json();
-                              console.log(resJson);
+                              // console.log(resJson);
                               if (resJson && resJson.success) {
                                 const runes = resJson.runes;
                                 const {
