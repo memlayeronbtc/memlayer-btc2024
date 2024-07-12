@@ -10,7 +10,7 @@ const mempoolJS = require("@mempool/mempool.js");
 const MemlayerTokenABI = require("./abi/MemlayerTokenABI.json");
 
 admin.initializeApp({
-  databaseURL: functions.config().db.uri
+  databaseURL: functions.config().db.uri,
 });
 
 function removeEmpty(obj) {
@@ -99,7 +99,6 @@ exports.pairing = functions.https.onRequest((req, res) => {
         const runeAddress = data.runeAddress;
 
         if (!passcode || passcode !== functions.config().passcode.pairing) {
-
           return res.status(200).send({ success: false, msg: "invalid input" });
         }
 
@@ -169,7 +168,6 @@ exports.claim = functions.https.onRequest((req, res) => {
         const ticker = data.ticker;
 
         if (!passcode || passcode !== functions.config().passcode.claim) {
-          
           return res.status(200).send({ success: false, msg: "invalid input" });
         }
 
@@ -384,6 +382,30 @@ exports.getoffchainpairing = functions.https.onRequest((req, res) => {
   });
 });
 
+exports.whitelistedrunes = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    switch (req.method) {
+      case "GET":
+        const snapshot = await admin.database().ref(`/lifting/`).once("value");
+        const result = snapshot.val();
+        const runes = [];
+
+        for (const [key, value] of Object.entries(result)) {
+          const token = value;
+          delete token.lifts;
+          runes.push(token);
+        }
+
+        return res.status(200).send({
+          success: true,
+          lastUpdate: Date.now(),
+          runes,
+        });
+        break;
+    }
+  });
+});
+
 exports.getlifts = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
     const ticker = req.query.ticker;
@@ -403,7 +425,7 @@ exports.getlifts = functions.https.onRequest((req, res) => {
             }
           }
 
-          if (!("lifts" in token)){
+          if (!("lifts" in token)) {
             return res.status(200).send({
               success: false,
               msg: "need to setup chain RPC info in firebase",
@@ -412,7 +434,7 @@ exports.getlifts = functions.https.onRequest((req, res) => {
           }
 
           const lift = token?.lifts[0];
-          
+
           delete token.lifts;
 
           return res.status(200).send({
@@ -480,7 +502,10 @@ exports.pushbatchtxs = functions.https.onRequest((req, res) => {
         try {
           const data = req.body;
           const passcode = data.passcode;
-          if (!passcode || passcode !== functions.config().passcode.pushbatchtxs) {
+          if (
+            !passcode ||
+            passcode !== functions.config().passcode.pushbatchtxs
+          ) {
             return res.status(200).send({
               success: false,
               lastUpdate: Date.now(),
@@ -874,7 +899,11 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
         const amount = Number(data.amount);
         const release = data.release === "true" ? true : false;
 
-        if (!amount || !passcode || passcode !== functions.config().passcode.liftturborunes) {
+        if (
+          !amount ||
+          !passcode ||
+          passcode !== functions.config().passcode.liftturborunes
+        ) {
           return res.status(200).send({ success: false, msg: "invalid input" });
         }
 
@@ -948,26 +977,34 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
             };
           }
           if (rune.unconfirmed + rune.confirmed) {
-            if (!release){
+            if (!release) {
               const tx = await memlayerTokenContract
-              .connect(signer)
-              .liftTurboRunes(ethAddress, amount, gasSettings);
+                .connect(signer)
+                .liftTurboRunes(ethAddress, amount, gasSettings);
               await tx.wait();
             } else {
               const tx = await memlayerTokenContract
-              .connect(signer)
-              .releaseTurboRunes(ethAddress, amount, gasSettings);
+                .connect(signer)
+                .releaseTurboRunes(ethAddress, amount, gasSettings);
               await tx.wait();
             }
           }
         } catch (error) {
           console.log(error);
-          return res.status(200).send({ success: false, msg: "oops in lifting" });
+          return res
+            .status(200)
+            .send({ success: false, msg: "oops in lifting" });
         }
 
         return res
           .status(200)
-          .send({ success: true, ...rune, turboLiftedAmount: amount, isReleased: release, msg: "liftTurboRunes successfully" });
+          .send({
+            success: true,
+            ...rune,
+            turboLiftedAmount: amount,
+            isReleased: release,
+            msg: "liftTurboRunes successfully",
+          });
         break;
     }
   });
