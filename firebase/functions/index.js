@@ -579,7 +579,7 @@ parseBalance = async (runeAddress, result) => {
           // chain: v.chain,
           lifts: v.lifts,
           number: v.number,
-          // explorer: v.explorer,
+          local: v.local,
           runeId: v.runeId,
           turbo: v.turbo,
         });
