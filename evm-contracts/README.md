@@ -4,6 +4,8 @@ this is an evm erc20 token contract that access CCIP-read server via contract ca
 ## quick start
 - `npm i`
 - configure `.env` based on `sample.env`
+- setup chain info in `hardhat.config.js`
+- `npx hardhat test`
 - `npx hardhat run scripts\deploy.js --network rskTestnet` deploy to evm chains
 - setup CCIP-read gateway server and firebase functions
 
