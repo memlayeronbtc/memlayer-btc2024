@@ -392,6 +392,10 @@ exports.whitelistedrunes = functions.https.onRequest((req, res) => {
 
         for (const [key, value] of Object.entries(result)) {
           const token = value;
+          token.chain = token.lifts[0].chain;
+          if (!token.local){
+            token.explorer = token.lifts[0].explorer;
+          }
           delete token.lifts;
           runes.push(token);
         }
