@@ -1,27 +1,48 @@
 const axios = require('axios');
 const { Runestone } = require('runelib');
 const {execSync} = require('child_process');
+var qs = require('qs');
 
-const receivingAddress = "tb1pa7mpplj2x2790q0ykhs0rjyrsterxx25tg9qcl3nqu7g9mjp4wpqxkrsve"; // whichever address is the receiver
+const receivingAddress = "tb1pvd34y8hx2ja3rx7alc4rj77n8dgwl4k98ut29aua08720xte63pqe42rnk"; // whichever address is the receiver
 const isMainnet = false;
+var sentTransactions = [];
 
-function getTransactionInfo(receivingAddress_, isMainnet) {
+async function getEthAddress(senderAddress_) {
+    const url = `https://us-central1-memlayer.cloudfunctions.net/getoffchainpairing?runeAddress=${senderAddress_}`;
+    const res = await axios.get(url);
+    const resJson = res.data;
+    const ethAddress_ = resJson.ethAddress
+    console.log(resJson.ethAddress)
+    return ethAddress_
+}
+
+function getTransactionInfo(receivingAddress_, isMainnet, sentTransactions_) {
     let savedTransactions = [];
-    let commandStart;
+    let commandStartCli;
+    let commandOrd;
     if (isMainnet) {
-        commandStart = `"D:\\Program Files\\Bitcoin\\daemon\\bitcoin-cli.exe"`;
+        commandStartCli = `"D:\\Program Files\\Bitcoin\\daemon\\bitcoin-cli.exe"`;
+        commandOrd = `"D:\\code\\ord-0.18.5\\ord.exe" wallet transactions --limit 50`
     } 
     else {
-        commandStart = `"D:\\Program Files\\Bitcoin\\daemon\\bitcoin-cli.exe" -signet`;
+        commandStartCli = `"D:\\Program Files\\Bitcoin\\daemon\\bitcoin-cli.exe" -signet`;
+        commandOrd = `"D:\\code\\ord-0.18.5\\ord.exe" --signet wallet transactions --limit 50`;
     }
-    
-    try {
-        const getMempoolCommand = `${commandStart} getrawmempool`;
-        const mempoolResult = execSync(getMempoolCommand, { encoding: 'utf-8' });
-        const mempoolJson = JSON.parse(mempoolResult);
 
-        for (const transaction of mempoolJson) {
-            const getTransactionCommand = `${commandStart} getrawtransaction ${transaction} true`;
+    try {
+        const transactionListRes = execSync(commandOrd, { encoding: 'utf-8' });
+        const transactionsOrdJson = JSON.parse(transactionListRes);
+        const transactionList = [];
+
+        transactionsOrdJson.forEach(transactionObj => {
+            const ordTransactionId =  transactionObj.transaction
+            if (!sentTransactions_.includes(ordTransactionId)) {
+                transactionList.push(transactionObj.transaction);
+            }
+        });
+
+        for (const transactionId of transactionList) {
+            const getTransactionCommand = `${commandStartCli} getrawtransaction ${transactionId} true`;
             const transactionResult = execSync(getTransactionCommand, { encoding: 'utf-8' });
             const transactionInfo = JSON.parse(transactionResult);
             const transactionVout = transactionInfo.vout;
@@ -33,13 +54,12 @@ function getTransactionInfo(receivingAddress_, isMainnet) {
                     const vout0 = vin0.vout;
                     const rawtx_ = transactionInfo.hex;
 
-                    getSenderAddressCommand = `${commandStart} getrawtransaction ${txid0} true`;
+                    getSenderAddressCommand = `${commandStartCli} getrawtransaction ${txid0} true`;
                     const senderAddressResult = execSync(getSenderAddressCommand, { encoding: 'utf-8' });
                     const senderAddressInfo = JSON.parse(senderAddressResult);
                     const senderVout =  senderAddressInfo.vout[vout0];
                     const senderAddress = senderVout.scriptPubKey.address;
-
-                    savedTransactions.push({ senderAddress, rawtx_ });
+                    savedTransactions.push({ senderAddress, rawtx_, transactionId });
                 }
             }
         }
@@ -50,28 +70,78 @@ function getTransactionInfo(receivingAddress_, isMainnet) {
 }
 
 function decodeRune(rawtx0) {
-    const stone = Runestone.decipher(rawtx0);
-    console.log(stone._value.edicts);
-    const edict = stone._value.edicts;
+    try {
+        const stone = Runestone.decipher(rawtx0);
+        console.log(stone._value.edicts);
+        const edict = stone._value.edicts;
 
-    const amount = edict[0].amount;
-    const block = edict[0].id.block;
-    const idx = edict[0].id.idx;
-    const runeId = `${block}:${idx}`
-
-    return {runeId, amount};
+        const amount = edict[0].amount;
+        const block = edict[0].id.block;
+        const idx = edict[0].id.idx;
+        const runeId = `${block}:${idx}`;
+        return {runeId, amount};
     }
-
-
-transactions = getTransactionInfo(receivingAddress, isMainnet);
-
-const rawtx = transactions[0].rawtx_;
-const decodedRune = decodeRune(rawtx);
-
-const output = {
-    "senderAddress" : transactions[0].senderAddress,
-    "runeID" : decodedRune.runeId,
-    "amount" : decodedRune.amount
+    catch (error) {
+        console.error(`error: ${error.message}`);
+        return false
+    }
 }
 
-console.log(output)
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+    
+async function postTransactionInfo(ethAddress_, runeAddress_, runeId_, amount_) {
+    var data = {
+        'passcode': 'dbeb0hfde3acc323',
+        'ethAddress': ethAddress_,
+        'runeAddress': runeAddress_,
+        'runeId': runeId_,
+        'amount': amount_
+        }
+    var dataString = qs.stringify(data);
+    var config = {
+    method: 'post',
+    url: 'http://127.0.0.1:5001/memlayer/us-central1/liftturborunes',
+    headers: { 
+        'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    data : dataString
+    };
+
+    axios(config)
+    .then(function (response) {
+    console.log(JSON.stringify(response.data));
+    })
+    .catch(function (error) {
+    console.log(error);
+    });
+}
+
+(async () => {
+    while (true){
+        const transactions = getTransactionInfo(receivingAddress, isMainnet, sentTransactions);
+
+        for (let i = 0; i < transactions.length; i++) {
+            const returnRune = decodeRune(transactions[i].rawtx_);
+            if (!returnRune) {
+                transactions.splice(i, 1);
+            }
+            else {
+                const ethaddress = getEthAddress(transactions[i].senderAddress);
+                transactions[i].ethaddress = ethaddress;
+                transactions[i].amount = returnRune.amount;
+                transactions[i].runeId = returnRune.runeId;
+                console.log("ethaddress", ethaddress);
+            }
+        }
+
+        for (const transaction of transactions) {
+            await postTransactionInfo(transaction.ethAddress, transaction.senderAddress, transaction.amount, transaction.runeId);
+            sentTransactions.push(transaction.transactionId);
+            await sleep(5000); 
+        }
+
+        await sleep(20000);
+    }
+})();
