@@ -43,14 +43,14 @@ vec4 axisAngleToQuaternion(vec3 axis, float angle) {
 }
 
 void main() {
-  vec4 rotation = vec4(0.0, 1.0, 0.0, amplitude * length(color) * 0.00125);
+  vec4 rotation = vec4(.1, 1.0, .10, amplitude * length(color) * 0.00125);
   vec4 qRotation = axisAngleToQuaternion(rotation.xyz, rotation.w);
 
   vec3 newPosition =
       rotateVectorByQuaternion(position - color, qRotation) + color;
   vNormal = normalMatrix * rotateVectorByQuaternion(normal, qRotation);
 
-  vec4 mvPosition = modelViewMatrix * vec4(newPosition, 2.0);
+  vec4 mvPosition = modelViewMatrix * vec4(newPosition, 100.0);
   vViewPosition = -mvPosition.xyz;
 
   gl_Position = projectionMatrix * mvPosition;

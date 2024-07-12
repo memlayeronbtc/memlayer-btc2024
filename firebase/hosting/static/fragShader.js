@@ -35,8 +35,8 @@ void main() {
   // point light
 
   const vec3 lightPos3 = vec3(0.0, -100.0, 100.0);
-  const vec3 lightCol3 = vec3(.2, .2, .2);
-  const float maxDistance3 = 3000.0;
+  const vec3 lightCol3 = vec3(.969, .376, .102);
+  const float maxDistance3 = 5000.0;
   const float intensity3 = 1.0;
 
   vec4 lPosition3 = viewMatrix * vec4(lightPos3, 1.0);
