@@ -11,14 +11,16 @@ Memlayer makes BTC mempool TXs, blocks, and runes data accessible by smart contr
 
 3. What if there is **a shared layer to serve and connect both Bitcoin and EVM chains**? Cross-Chain Interoperability Protocol (CCIP) is a way to provide a signed data availability service for smart contracts. _What if we combine a CCIP-read gateway with a BTC full node_ to utilize mempool TXs from smart contract calls?
 
-## What it does
+## How to use Memlayer?
 We created an **easy** and **fast** way to lift BTC runes to any EVM chains. Here are steps to use Memlayer: 
 
-1. A user who'd like to send some of his/her BTC runes to an EVM chain. S/he will pair their BTC and ETH addresses first on https://app.memlayer.xyz
+1. A user who'd like to send some of his/her BTC runes to an EVM chain.
 
-2. The user will see a list of available BTC runes and a BTC deposit address.
+2. S/he will pair their BTC and ETH addresses by signing in both BTC and ETH wallets.
 
-3. The user sends the supported BTC runes to the BTC deposit address. As soon as this TX enters the mempool, Memlayer's CCIP gateway server picks it up 
+3. The user will see a list of available BTC runes and a BTC rune deposit address.
+
+4. The user sends the supported BTC runes to the BTC deposit address. As soon as this TX enters the mempool, Memlayer's CCIP gateway server picks it up 
 
 ## sidechain track challenges
 1. **Scalable Payment Solutions Challenge** - Using BTC runes for payments, games, or royalty rewards is not easy on the BTC L1 mainnet compared to using ERC-20 on EVM chains. Solving the utility problem of runes with sidechains can fuel growth for the whole BTC ecosystem. Memlayer makes it easy to lift BTC runes to sidechains so more utilities can be built using EVM smart contracts.
@@ -33,21 +35,23 @@ We created an **easy** and **fast** way to lift BTC runes to any EVM chains. Her
 
 6. **Gaming and NFTs** - Players can deposit BTC runes and receive ERC-20 as balances and credentials in EVM web3 games. In addition, BTC runes can also serve as rewards, scores, and consumables in typical EVM web3 games.
 
-## How to use this repo
+## How it works
+The core part is to enable smart contracts to read-access BTC mempool TXs via the CCIP-read gateway. Memlayer consists of the following parts: 
+
 ### evm-contracts
-This ERC-20 contract `MemlayerToken.sol` works with the CCIP-read gateway server to process BTC rune deposit TXs from mempool. Unconfirmed rune deposits cannot be transferred and will be reverted.
+This ERC-20 contract `MemlayerToken.sol` works with the CCIP-read gateway server to process BTC rune deposit TXs from mempool. Unconfirmed rune deposits cannot be transferred and will be reverted. This ERC-20 contract is designed for serving lifted tokens with a rune-lifting, balance-checking, and transfer-locking mechanism.
 
 ### gateway-server
-This CCIP-read gateway server (deployed on AWS) picks up mempool TXs and lifts runes to EVM chains.
+This CCIP-read gateway server (deployed on AWS) picks up mempool TXs and lifts runes to EVM chains. We attempted two ways to pick up BTC TXs (i.e., using btc-worker scripts on a full node or `mempool.space websocket API`). The gateway server signs the BTC data with the same private key that deploys the ERC-20 rune contracts for authenticity. This gateway server does not store any user or TX data.
 
 ### firebase hosting
-This is the front-end one-pager website for checking unconfirmed/confirmed balances and manually claiming/withdrawing BTC or ERC-20 runes.
+This is the front-end one-pager website for checking unconfirmed/confirmed balances and manually claiming/withdrawing BTC or ERC-20 runes. On this page, users pair their BTC and ETH addresses and start the rune-deposit process. They will see a list of rune info about the unconfirmed/confirmed balances. Users can also initiate withdrawal requests to burn the ERC-20 runes and the BTC worker script will send out runes to users' deposit addresses.
 
 ### firebase functions
-These serverless functions handle TXs and store data on Firebase real-time database
+These serverless functions extend the gateway server by handling TXs and storing TX-related data on Firebase's real-time database. We store BTC and ETH address pairs so Memlayer can correctly send tokens to their designated addresses.
 
 ### btc-workers
-There are worker scripts directly working with a BTC full-node for picking up deposit TXs and sending out withdraw TXs.
+There are worker scripts directly interacting with a BTC full-node for picking up deposit TXs and sending out withdraw TXs.
 
 ## references
 - CCIP-read gateway https://github.com/smartcontractkit/
