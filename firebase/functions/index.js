@@ -145,16 +145,6 @@ exports.pairing = functions.https.onRequest((req, res) => {
   });
 });
 
-// // pairing for memlayer
-// exports.checkpairing = functions.https.onRequest((req, res) => {
-//   cors(req, res, async () => {
-//     return res.status(200).send({
-//       success: false,
-//       msg: "invalid",
-//     });
-//   });
-// });
-
 // TODO: make it more generic to claim any claimable balance
 exports.claim = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
@@ -222,13 +212,6 @@ exports.claim = functions.https.onRequest((req, res) => {
           MemlayerTokenABI,
           signer,
         );
-
-        // const runicBalance = Number(
-        //   await memlayerTokenContract.runicBalance(ethAddress, {
-        //     ccipReadEnabled: true,
-        //   }),
-        // );
-        // console.log("runicBalance", runicBalance);
 
         const claimedBalance = Number(
           ethers.utils.formatEther(
@@ -324,13 +307,11 @@ exports.getoffchainpairing = functions.https.onRequest((req, res) => {
               matched = true;
             }
             const resultDb = await getbalancedb(result.ordAddress);
-            // console.log("result", result);
             const { claimables, runesData } = await parseBalance(
               result.ordAddress,
               resultDb,
             );
-            // console.log("claimables", claimables);
-            // console.log("runesData", runesData);
+
             hasClaimableCredits = claimables;
             runes = runesData;
           } else {
@@ -364,16 +345,13 @@ exports.getoffchainpairing = functions.https.onRequest((req, res) => {
               matched = true;
             }
             const resultDb = await getbalancedb(runeAddress);
-            // console.log("result", result);
             const { claimables, runesData } = await parseBalance(
               runeAddress,
               resultDb,
             );
-            // console.log("claimables", claimables);
-            // console.log("runesData", runesData);
+
             hasClaimableCredits = claimables;
             runes = runesData;
-            // }
           } else {
             // no pairing result
             const updateData = {
@@ -412,8 +390,8 @@ exports.whitelistedrunes = functions.https.onRequest((req, res) => {
         for (const [key, value] of Object.entries(result)) {
           const token = value;
           token.chain = token.lifts[0].chain;
+          token.contractAddress = token.lifts[0].contractAddress;
           if (!token.local) {
-            token.contractAddress = token.lifts[0].contractAddress;
             token.explorer = token.lifts[0].explorer;
           }
           delete token.lifts;
@@ -915,7 +893,6 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
         const data = req.body;
 
         const passcode = data.passcode;
-        // const ethAddress = data.ethAddress;
         const runeAddress = data.runeAddress;
         const runeId = data.runeId;
         const transactionId = data.transactionId;
@@ -929,7 +906,10 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
           !passcode ||
           passcode !== functions.config().passcode.liftturborunes
         ) {
-          return res.status(200).send({ success: false, msg: "invalid input" });
+          return res.status(200).send({
+            success: false,
+            msg: "invalid input",
+          });
         }
 
         if (amount < 1) {
@@ -1065,13 +1045,6 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
             .connect(signer)
             .getUnconfirmedRunicBalance(ethAddress),
         );
-
-        // } catch (error) {
-        //   console.log(error);
-        //   return res
-        //     .status(200)
-        //     .send({ success: false, msg: "oops in lifting" });
-        // }
 
         return res.status(200).send({
           success: true,
