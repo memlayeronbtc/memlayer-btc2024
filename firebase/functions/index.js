@@ -218,7 +218,6 @@ exports.claim = functions.https.onRequest((req, res) => {
             await memlayerTokenContract.getClaimedBalance(ethAddress),
           ),
         );
-        console.log("claimedBalance", claimedBalance);
 
         const claimable = Math.floor(
           rune.turbo
