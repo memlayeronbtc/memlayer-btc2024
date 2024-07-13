@@ -5,6 +5,7 @@ const qs = require("qs");
 
 const depositAddress = "bc1p6nfc2danj9wuwn5n63eqcwx354ww5yym5pyl7egfmzdgk8h4kuwsay8pw2";
 const firebaseServerUri = "https://us-central1-memlayer.cloudfunctions.net";
+// const firebaseServerUri = "http://192.168.29.200:5001/memlayer/us-central1";
 const isMainnet = true;
 var sentTransactions = [];
 
@@ -21,7 +22,7 @@ var sentTransactions = [];
 // }
 
 // based on receiving address, get a list of TXs with sender addresses and rawTX for further processing
-function getTransactionInfo(depositAddress_, isMainnet, sentTransactions_) {
+function getTransactionInfo(depositAddress_, isMainnet) {
   let savedTransactions = {};
   let commandStartCli;
   let commandOrd;
@@ -118,37 +119,51 @@ function sleep(ms) {
 
 // ask server to lift rune received to EVM
 async function postTransactionInfo(
-  // ethAddress_,
   runeAddress_,
   runeId_,
   amount_,
-  txid_
+  txid_,
+  confirmations_
 ) {
-  var data = {
+  const data = {
     passcode: "dbeb0hfde3acc323",
-    // ethAddress: ethAddress_,
     runeAddress: runeAddress_,
     runeId: runeId_,
     amount: amount_,
-    txid: txid_
-  };
-  var dataString = qs.stringify(data);
-  var config = {
-    method: "post",
-    url: `${firebaseServerUri}/liftturborunes`,
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    data: dataString,
+    transactionId: txid_,
+    confirmations: confirmations_
   };
 
-  axios(config)
-    .then(function (response) {
-      console.log(JSON.stringify(response.data));
-    })
-    .catch(function (error) {
-      console.log(error);
-    });
+  const res = await fetch(`${firebaseServerUri}/liftturborunes`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8",
+      },
+    }
+  )
+
+  console.log(await res.json());
+  
+  // var dataString = qs.stringify(data);
+  // console.log("dataString", dataString)
+  // var config = {
+  //   method: "POST",
+  //   url: `${firebaseServerUri}/liftturborunes`,
+  //   headers: {
+  //     "Content-Type": "application/x-www-form-urlencoded",
+  //   },
+  //   body: dataString,
+  // };
+
+  // axios(config)
+  //   .then(function (response) {
+  //     console.log(JSON.stringify(response.data));
+  //   })
+  //   .catch(function (error) {
+  //     console.log(error);
+  //   });
 }
 
 (async () => {
@@ -156,7 +171,7 @@ async function postTransactionInfo(
     const transactions = getTransactionInfo(
       depositAddress,
       isMainnet,
-      sentTransactions,
+      // sentTransactions,
     );
     // console.log(transactions)
 
@@ -171,7 +186,7 @@ async function postTransactionInfo(
         //   transactions[i].ethaddress = ethaddress;
         //   // console.log("ethaddress", ethaddress);
         // }
-        transactions[i].amount = returnRune.amount;
+        transactions[i].amount = Number(returnRune.amount);
         transactions[i].runeId = returnRune.runeId;
       }
     }
@@ -180,10 +195,9 @@ async function postTransactionInfo(
     // break;
     for (const transaction of transactions) {
       await postTransactionInfo(
-        // transaction.ethAddress,
         transaction.senderAddress,
-        transaction.amount,
         transaction.runeId,
+        transaction.amount,
         transaction.transactionId,
         transaction.confirmations
       );
