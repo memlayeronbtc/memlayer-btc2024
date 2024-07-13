@@ -42,10 +42,10 @@ Memlayer addresses the following challenges:
 6. **Gaming and NFTs** - Players can deposit BTC runes and receive ERC-20 as balances and credentials in EVM web3 games. In addition, BTC runes can also serve as rewards, scores, and consumables in typical EVM web3 games.
 
 ## How it works
-The core part is to enable smart contracts to read-access BTC mempool TXs via the CCIP-read gateway. Memlayer consists of the following parts: 
+The core part is to enable BTC rune TXs directly lifted to EVM sidechains and allow smart contracts to access signed BTC TXs via the CCIP-read gateway. Memlayer consists of the following parts: 
 
 ### evm-contracts
-This ERC-20 contract `MemlayerToken.sol` works with the CCIP-read gateway server to process BTC rune deposit TXs from mempool. Unconfirmed rune deposits cannot be transferred and will be reverted. This ERC-20 contract is designed for serving lifted tokens with a rune-lifting, balance-checking, and transfer-locking mechanism.
+This ERC-20 rune contract [`MemlayerToken.sol`](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/evm-contracts/contracts/MemlayerToken.sol) works with the CCIP-read gateway server to process BTC rune deposit TXs from mempool. Unconfirmed rune deposits cannot be transferred and will be reverted. This ERC-20 contract is designed for serving lifted tokens with a rune-lifting, balance-checking, and transfer-locking mechanism. ERC-20 Memlayer token contracts will be deployed to sidechains and served as ERC-20 rune tokens written in Solidity, hardhat, and javascript.
 
 ### gateway-server
 This CCIP-read gateway server (deployed on AWS) picks up mempool TXs and lifts runes to EVM chains. We attempted two ways to pick up BTC TXs (i.e., using btc-worker scripts on a full node or `mempool.space websocket API`). The gateway server signs the BTC data with the same private key that deploys the ERC-20 rune contracts for authenticity. This gateway server does not store any user or TX data.
@@ -57,7 +57,7 @@ This is the front-end one-pager website for checking unconfirmed/confirmed balan
 These serverless functions extend the gateway server by handling TXs and storing TX-related data on Firebase's real-time database. We store BTC and ETH address pairs so Memlayer can correctly send tokens to their designated addresses.
 
 ### btc-workers
-There are worker scripts directly interacting with a BTC full-node for picking up deposit TXs and sending out withdraw TXs.
+There are worker scripts directly interacting with a BTC full-node for picking up deposit TXs and sending out withdraw TXs. A bitcoin full node with ord 0.19.0 for getting mempool and block TXs. BTC worker scripts were written in javascript to decode BTC rune deposit TXs and in python to send out the rune withdraw requests.
 
 ## Challenges we ran into
 We had to prioritize ease-of-use and speed for this hackathon, and then enhance the security aspect for future extensions.
