@@ -37,7 +37,9 @@ class Main extends Component {
       erc20Balances: [],
       pendingWithdraws: [],
       finalizedWithdraws: [],
-      whitelistedrunes: []
+      whitelistedrunes: [],
+      claimedBalances: [],
+      unconfirmedRunicBalances: [],
     };
   }
 
@@ -94,25 +96,31 @@ class Main extends Component {
   };
 
   getWhitelistedRunes = async () => {
-    const res = await fetch(
-      `${serverUrl}/whitelistedrunes`,
-    );
+    const res = await fetch(`${serverUrl}/whitelistedrunes`);
     const resJson = await res.json();
     if (resJson && resJson.success) {
       const whitelistedrunes = resJson.runes;
       // console.log(whitelistedrunes)
       this.setState({
-        whitelistedrunes
-      })
+        whitelistedrunes,
+      });
     }
-  }
+  };
 
   refreshErc20Balances = async (address, runes) => {
     const balances = Array.from({ length: runes.length }, () => 0);
     const pendingWithdraws = Array.from({ length: runes.length }, () => 0);
     const finalizedWithdraws = Array.from({ length: runes.length }, () => 0);
+    const claimedBalances = Array.from({ length: runes.length }, () => 0);
+    const unconfirmedRunicBalances = Array.from(
+      { length: runes.length },
+      () => 0,
+    );
     for (let index = 0; index < runes.length; index++) {
       const rune = runes[index];
+      if (rune && rune.noClaimTurbo) {
+        continue;
+      }
       const provider = new ethers.providers.JsonRpcProvider(
         rune["lifts"][0].chainRPC,
       );
@@ -121,17 +129,45 @@ class Main extends Component {
         MemlayerTokenABI,
         provider,
       );
-      balances[index] = ethers.utils.formatEther(
-        await memlayerTokenContract.balanceOf(address),
+      balances[index] = Number(
+        ethers.utils.formatEther(
+          await memlayerTokenContract.balanceOf(address),
+        ),
       );
-      pendingWithdraws[index] = ethers.utils.formatEther(
-        await memlayerTokenContract.pendingWithdrawToBTC(address),
+      pendingWithdraws[index] = Number(
+        ethers.utils.formatEther(
+          await memlayerTokenContract.getPendingWithdrawToBTC(address),
+        ),
       );
-      finalizedWithdraws[index] = ethers.utils.formatEther(
-        await memlayerTokenContract.finalizedWithdrawToBTC(address),
+      finalizedWithdraws[index] = Number(
+        ethers.utils.formatEther(
+          await memlayerTokenContract.getFinalizedWithdrawToBTC(address),
+        ),
       );
+      claimedBalances[index] = Number(
+        ethers.utils.formatEther(
+          await memlayerTokenContract.getClaimedBalance(address),
+        ),
+      );
+      unconfirmedRunicBalances[index] = Number(
+        ethers.utils.formatEther(
+          await memlayerTokenContract.getUnconfirmedRunicBalance(address),
+        ),
+      );
+      // console.log("balance", balances[index]);
+      // console.log("pendingWithdraw", pendingWithdraws[index]);
+      // console.log("finalizedWithdraw", finalizedWithdraws[index]);
+      // console.log("claimedBalance", claimedBalances[index]);
+      // console.log("unconfirmedRunicBalance", unconfirmedRunicBalances[index]);
     }
-    return { erc20Balances: balances, pendingWithdraws, finalizedWithdraws };
+
+    return {
+      erc20Balances: balances,
+      pendingWithdraws,
+      finalizedWithdraws,
+      claimedBalances,
+      unconfirmedRunicBalances,
+    };
   };
 
   onConnectAccountClick = async () => {
@@ -153,7 +189,7 @@ class Main extends Component {
           ordinalAddress,
           ethAddress,
         });
-        
+
         // always pair first
         const res0 = await fetch(`${serverUrl}/pairing`, {
           method: "POST",
@@ -174,21 +210,27 @@ class Main extends Component {
           const resJson = await res.json();
           for (let index = 0; index < resJson.runes.length; index++) {
             const rune = resJson.runes[index];
-            if (rune.local){
+            if (rune.local) {
               resJson.runes.splice(index, 1);
             }
           }
           // console.log(resJson.runes);
-          const { erc20Balances, pendingWithdraws, finalizedWithdraws } =
-            await this.refreshErc20Balances(ethAddress, resJson.runes);
-          
-          
+          const {
+            erc20Balances,
+            pendingWithdraws,
+            finalizedWithdraws,
+            claimedBalances,
+            unconfirmedRunicBalances,
+          } = await this.refreshErc20Balances(ethAddress, resJson.runes);
+
           this.setState({
             accountLinked: true,
             runes: resJson.runes,
             erc20Balances,
             pendingWithdraws,
             finalizedWithdraws,
+            claimedBalances,
+            unconfirmedRunicBalances,
             isClaiming: Array.from(
               { length: resJson.runes.length },
               () => false,
@@ -219,22 +261,22 @@ class Main extends Component {
     tokenAddress,
     tokenSymbol,
     tokenDecimals,
-    tokenIcon
+    tokenIcon,
   ) => {
     const wasAdded = await ethereum.request({
-      method: 'wallet_watchAsset',
+      method: "wallet_watchAsset",
       params: {
-        type: 'ERC20',
+        type: "ERC20",
         options: {
           address: tokenAddress,
           symbol: tokenSymbol,
           decimals: tokenDecimals,
-          image: tokenIcon
+          image: tokenIcon,
         },
       },
     });
     return wasAdded;
-  }
+  };
 
   // switch chain when withdrawing
   addChainToWallet = async (
@@ -298,6 +340,8 @@ class Main extends Component {
       erc20Balances,
       pendingWithdraws,
       finalizedWithdraws,
+      claimedBalances,
+      unconfirmedRunicBalances,
     } = this.state;
     const canSignup =
       ordinalAddress && ethAddress && accountChecked && !accountLinked;
@@ -461,10 +505,15 @@ class Main extends Component {
                         <br />
                         <span style={{ fontSize: "smaller" }}>
                           BTC ord Address:
-                          <br /> <a
-                              href={`https://mempool.space/address/${ordinalAddress}`} target="_blank"
-                              style={{ textDecoration: "underline" }}
-                            >{ordinalAddress}</a>✔️
+                          <br />{" "}
+                          <a
+                            href={`https://mempool.space/address/${ordinalAddress}`}
+                            target="_blank"
+                            style={{ textDecoration: "underline" }}
+                          >
+                            {ordinalAddress}
+                          </a>
+                          ✔️
                         </span>
                         <br />
                         <br />
@@ -478,10 +527,13 @@ class Main extends Component {
                         BTC rune deposit address:
                         <br />
                         <b style={{ fontSize: "small", color: "pink" }}>
-                        <a
-                              href={`https://mempool.space/address/${import.meta.env.VITE_RUNE_DEPOSIT_ADDRESS}`} target="_blank"
-                              style={{ textDecoration: "underline" }}
-                            >{import.meta.env.VITE_RUNE_DEPOSIT_ADDRESS}</a>
+                          <a
+                            href={`https://mempool.space/address/${import.meta.env.VITE_RUNE_DEPOSIT_ADDRESS}`}
+                            target="_blank"
+                            style={{ textDecoration: "underline" }}
+                          >
+                            {import.meta.env.VITE_RUNE_DEPOSIT_ADDRESS}
+                          </a>
                         </b>
                         <br />
                         <br />
@@ -492,6 +544,7 @@ class Main extends Component {
                         <br />
                         {whitelistedrunes.map((rune, i) => (
                           <p key={`sp${rune.ticker}z`}>
+                            <br />
                             <a
                               href={`https://ordinals.com/rune/${rune.number}`}
                               style={{ textDecoration: "underline" }}
@@ -499,25 +552,49 @@ class Main extends Component {
                             >
                               <b style={{ fontSize: "small" }}>{rune.ticker}</b>
                             </a>
-                            {rune.turbo ? <span style={{ fontSize: "0.6em", color: "pink" }}>{` TURBO `}</span>:<span/>}
-                            <span style={{ fontSize: "small" }}>{` -> `}</span>{rune.explorer ? <a
-                              href={`${rune.explorer}`}
-                              style={{ textDecoration: "underline",fontSize: "small" }}
-                              target="_blank"
-                            >{rune.chain}</a>:<span style={{ fontSize: "small" }}>{rune.chain}</span>}
+                            {rune.turbo ? (
+                              <span
+                                style={{ fontSize: "0.6em", color: "pink" }}
+                              >{` TURBO ${rune.noClaimTurbo ? "+" : ""}`}</span>
+                            ) : (
+                              <span />
+                            )}
+                            <span style={{ fontSize: "small" }}>{` 🡢 `}</span>
+                            {rune.explorer ? (
+                              <a
+                                href={`${rune.explorer}/address/${rune.contractAddress}`}
+                                style={{
+                                  textDecoration: "underline",
+                                  fontSize: "small",
+                                }}
+                                target="_blank"
+                              >
+                                {rune.chain}
+                              </a>
+                            ) : (
+                              <span style={{ fontSize: "small" }}>
+                                {rune.chain}
+                              </span>
+                            )}
+                            <br />
+                            <span style={{ fontSize: "0.7em" }}>
+                              ERC20: {rune.contractAddress}
+                            </span>
                           </p>
                         ))}
                         <br />
-                        {runes.length > 0 ? <hr /> : <div/>}
+                        {runes.length > 0 ? <hr /> : <div />}
                         <p style={{ fontSize: "smaller" }}>
-                          {runes.map((rune, i) => (
-                            <span key={`sp${rune.ticker}`}>
-                              <br />
-                              <b style={{ fontSize: "larger" }}>
-                                {rune.ticker}
-                              </b>
-                              <br />
-                              {/* Rune deposit address:
+                          {runes.map(
+                            (rune, i) =>
+                              !rune.noClaimTurbo && (
+                                <span key={`sp${rune.ticker}`}>
+                                  <br />
+                                  <b style={{ fontSize: "larger" }}>
+                                    {rune.ticker}
+                                  </b>
+                                  <br />
+                                  {/* Rune deposit address:
                               <br />
                               <b style={{ fontSize: "small", color: "pink" }}>
                                 {rune.lifts[0].depositAddress}
@@ -534,232 +611,269 @@ class Main extends Component {
                                 FROM your BTC ord address
                               </span>
                               <br /> */}
-                              <br />
-                              <a
-                                href={`https://ordinals.com/rune/${rune.number}`}
-                                style={{ textDecoration: "underline" }}
-                                target="_blank"
-                              >
-                                BTC{" "}
-                              </a>
-                              {` 🡢 `}
-                              <a
-                                href={`${rune.lifts[0].explorer}/address/${rune.lifts[0].contractAddress}`}
-                                style={{ textDecoration: "underline" }}
-                                target="_blank"
-                              >
-                                {rune.lifts[0].chain}
-                              </a><span style={{marginLeft: "3px"}}>(<span style={{textDecoration: "underline", cursor: "pointer"}} onClick={async()=>{
-                                await this.addChainToWallet(
-                                  rune["lifts"][0].chainId,
-                                  rune["lifts"][0].chain,
-                                  rune["lifts"][0].chainRPC,
-                                  rune["lifts"][0].iconUri,
-                                  rune["lifts"][0].ticker,
-                                  rune["lifts"][0].ticker,
-                                  18,
-                                  rune["lifts"][0].explorer,
-                                );
-                                this.addErc20ToWallet(
-                                  rune.lifts[0].contractAddress,
-                                  rune.ticker.substring(0,3),
-                                  18,null
-                                )
-                              }}>add</span>)</span>
-                              <br />
-                              {rune.confirmed > 0 && (
-                                <span>
-                                  Confirmed Deposit (L1): {rune.confirmed}{" "}
-                                  {rune.symbol}
                                   <br />
-                                </span>
-                              )}
-                              {rune.unconfirmed > 0 && (
-                                <span>
-                                  Unconfirmed Deposit (L1): {rune.unconfirmed}{" "}
-                                  {rune.symbol}
+                                  <a
+                                    href={`https://ordinals.com/rune/${rune.number}`}
+                                    style={{ textDecoration: "underline" }}
+                                    target="_blank"
+                                  >
+                                    BTC{" "}
+                                  </a>
+                                  {` 🡢 `}
+                                  <a
+                                    href={`${rune.lifts[0].explorer}/address/${rune.lifts[0].contractAddress}`}
+                                    style={{ textDecoration: "underline" }}
+                                    target="_blank"
+                                  >
+                                    {rune.lifts[0].chain}
+                                  </a>
+                                  <span style={{ marginLeft: "3px" }}>
+                                    (
+                                    <span
+                                      style={{
+                                        textDecoration: "underline",
+                                        cursor: "pointer",
+                                      }}
+                                      onClick={async () => {
+                                        await this.addChainToWallet(
+                                          rune["lifts"][0].chainId,
+                                          rune["lifts"][0].chain,
+                                          rune["lifts"][0].chainRPC,
+                                          rune["lifts"][0].iconUri,
+                                          rune["lifts"][0].ticker,
+                                          rune["lifts"][0].ticker,
+                                          18,
+                                          rune["lifts"][0].explorer,
+                                        );
+                                        this.addErc20ToWallet(
+                                          rune.lifts[0].contractAddress,
+                                          rune.ticker.substring(0, 3),
+                                          18,
+                                          null,
+                                        );
+                                      }}
+                                    >
+                                      add
+                                    </span>
+                                    )
+                                  </span>
                                   <br />
-                                </span>
-                              )}
-                              {rune.confirmed +
-                                rune.unconfirmed -
-                                erc20Balances[i] >
-                                0 && (
-                                <span>
-                                  Runic balance (Memlayer):{" "}
+                                  {rune.confirmed > 0 && (
+                                    <span>
+                                      Confirmed Deposit (L1): {rune.confirmed}{" "}
+                                      {rune.symbol}
+                                      <br />
+                                    </span>
+                                  )}
+                                  {rune.unconfirmed > 0 && (
+                                    <span>
+                                      Unconfirmed Deposit (L1):{" "}
+                                      {rune.unconfirmed} {rune.symbol}
+                                      <br />
+                                    </span>
+                                  )}
                                   {rune.confirmed +
                                     rune.unconfirmed -
-                                    erc20Balances[i]}{" "}
-                                  {rune.symbol}
-                                  <br />
-                                </span>
-                              )}
-                              {Math.floor(erc20Balances[i]) > 0 && (
-                                <span>
-                                  <b>Wallet Balance</b> (ERC20):{" "}
-                                  <b>
-                                    {Math.floor(erc20Balances[i])} {rune.symbol}
-                                  </b>
-                                  <br />
-                                </span>
-                              )}
-                              {Math.floor(pendingWithdraws[i]) > 0 && (
-                                <span>
-                                  Pending withdraw (ERC20):{" "}
-                                  {Math.floor(pendingWithdraws[i])}{" "}
-                                  {rune.symbol}
-                                  <br />
-                                </span>
-                              )}
-                              {Math.floor(finalizedWithdraws[i]) > 0 && (
-                                <span>
-                                  Outgoing withdraw (Memlayer):{" "}
-                                  {Math.floor(finalizedWithdraws[i])}{" "}
-                                  {rune.symbol}
-                                  <br />
-                                </span>
-                              )}
-                              {/* <span>Confirmed withdraw (L1): {rune.unconfirmed}{" "}
+                                    claimedBalances[i] >
+                                    0 && (
+                                    <span style={{ color: "yellow" }}>
+                                      Runic balance (Memlayer):{" "}
+                                      {rune.confirmed +
+                                        rune.unconfirmed -
+                                        claimedBalances[i]}{" "}
+                                      {rune.symbol}
+                                      <br />
+                                    </span>
+                                  )}
+
+                                  {erc20Balances[i] >= 0 && (
+                                    <span style={{ color: "pink" }}>
+                                      <b>Wallet Balance</b> (ERC20):{" "}
+                                      <b>
+                                        {Math.floor(erc20Balances[i])}{" "}
+                                        {rune.symbol}
+                                      </b>
+                                      <br />
+                                    </span>
+                                  )}
+
+                                  {Math.floor(pendingWithdraws[i]) > 0 && (
+                                    <span>
+                                      Pending withdraw (ERC20):{" "}
+                                      {Math.floor(pendingWithdraws[i])}{" "}
+                                      {rune.symbol}
+                                      <br />
+                                    </span>
+                                  )}
+                                  {Math.floor(finalizedWithdraws[i]) > 0 && (
+                                    <span>
+                                      Outgoing withdraw (Memlayer):{" "}
+                                      {Math.floor(finalizedWithdraws[i])}{" "}
+                                      {rune.symbol}
+                                      <br />
+                                    </span>
+                                  )}
+                                  {/* <span>Confirmed withdraw (L1): {rune.unconfirmed}{" "}
                               {rune.symbol}
                               <br /></span> */}
-                              {rune.confirmed > 0 && (
-                                <button
-                                  disabled={isClaiming[i]}
-                                  className={`btn text-sm text-yellow-400 border border-yellow-400 shadow-sm mt-3 mb-1 w-80`}
-                                  onClick={async () => {
-                                    const runes = this.state.runes;
-                                    const nowClaiming = Array.from(
-                                      { length: runes.length },
-                                      () => false,
-                                    );
-                                    nowClaiming[i] = true;
-                                    this.setState({
-                                      isClaiming: nowClaiming,
-                                    });
+                                  {(rune.turbo
+                                    ? rune.confirmed +
+                                        rune.unconfirmed -
+                                        claimedBalances[i] >
+                                      0
+                                    : rune.confirmed - claimedBalances[i] >
+                                      0) && (
+                                    <button
+                                      disabled={isClaiming[i]}
+                                      className={`btn text-sm text-yellow-400 border border-yellow-400 shadow-sm mt-3 mb-1 w-80`}
+                                      onClick={async () => {
+                                        const runes = this.state.runes;
+                                        const nowClaiming = Array.from(
+                                          { length: runes.length },
+                                          () => false,
+                                        );
+                                        nowClaiming[i] = true;
+                                        this.setState({
+                                          isClaiming: nowClaiming,
+                                        });
 
-                                    // server will claim all
-                                    const res = await fetch(
-                                      `${serverUrl}/claim`,
-                                      {
-                                        method: "POST",
-                                        body: JSON.stringify({
-                                          ethAddress: ethAddress,
-                                          runeAddress: ordinalAddress,
-                                          passcode: import.meta.env
-                                            .VITE_FIREBASE_FUNCTION_CLAIM,
-                                          ticker: rune.ticker,
-                                        }),
-                                        headers: {
-                                          "Content-type":
-                                            "application/json; charset=UTF-8",
-                                        },
-                                      },
-                                    );
-                                    const resJson = await res.json();
-                                    if (resJson.success) {
-                                      const runes = this.state.runes;
-                                      const {
-                                        erc20Balances,
-                                        pendingWithdraws,
-                                        finalizedWithdraws,
-                                      } = await this.refreshErc20Balances(
-                                        ethAddress,
-                                        runes,
-                                      );
+                                        // server will claim all
+                                        const res = await fetch(
+                                          `${serverUrl}/claim`,
+                                          {
+                                            method: "POST",
+                                            body: JSON.stringify({
+                                              ethAddress: ethAddress,
+                                              runeAddress: ordinalAddress,
+                                              passcode: import.meta.env
+                                                .VITE_FIREBASE_FUNCTION_CLAIM,
+                                              ticker: rune.ticker,
+                                            }),
+                                            headers: {
+                                              "Content-type":
+                                                "application/json; charset=UTF-8",
+                                            },
+                                          },
+                                        );
+                                        const resJson = await res.json();
+                                        if (resJson.success) {
+                                          const runes = this.state.runes;
+                                          const {
+                                            erc20Balances,
+                                            pendingWithdraws,
+                                            finalizedWithdraws,
+                                            claimedBalances,
+                                            unconfirmedRunicBalances,
+                                          } = await this.refreshErc20Balances(
+                                            ethAddress,
+                                            runes,
+                                          );
 
-                                      const nowClaiming = Array.from(
-                                        { length: runes.length },
-                                        () => false,
-                                      );
-                                      this.setState({
-                                        erc20Balances,
-                                        pendingWithdraws,
-                                        finalizedWithdraws,
-                                        isClaiming: nowClaiming,
-                                      });
-                                    }
-                                  }}
-                                >
-                                  {isClaiming[i] ? `Claiming...` : `Claim`}
-                                </button>
-                              )}
-                              <br />
-                              {Math.floor(erc20Balances[i]) > 0 && (
-                                <button
-                                  disabled={isWithdrawing[i]}
-                                  className={`btn text-sm text-pink-400 border border-pink-400 shadow-sm mt-3 mb-1 w-80`}
-                                  onClick={async () => {
-                                    const runes = this.state.runes;
-                                    const nowWithdrawing = Array.from(
-                                      { length: runes.length },
-                                      () => false,
-                                    );
-                                    nowWithdrawing[i] = true;
-                                    this.setState({
-                                      isWithdrawing: nowWithdrawing,
-                                    });
+                                          const nowClaiming = Array.from(
+                                            { length: runes.length },
+                                            () => false,
+                                          );
+                                          this.setState({
+                                            erc20Balances,
+                                            pendingWithdraws,
+                                            finalizedWithdraws,
+                                            claimedBalances,
+                                            unconfirmedRunicBalances,
+                                            isClaiming: nowClaiming,
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      {isClaiming[i]
+                                        ? `Claiming...`
+                                        : `Claim Runic Balance`}
+                                    </button>
+                                  )}
+                                  <br />
+                                  {Math.floor(erc20Balances[i]) > 0 && (
+                                    <button
+                                      disabled={isWithdrawing[i]}
+                                      className={`btn text-sm text-pink-400 border border-pink-400 shadow-sm mt-3 mb-1 w-80`}
+                                      onClick={async () => {
+                                        const runes = this.state.runes;
+                                        const nowWithdrawing = Array.from(
+                                          { length: runes.length },
+                                          () => false,
+                                        );
+                                        nowWithdrawing[i] = true;
+                                        this.setState({
+                                          isWithdrawing: nowWithdrawing,
+                                        });
 
-                                    const provider =
-                                      new ethers.providers.Web3Provider(
-                                        window.ethereum,
-                                        "any",
-                                      );
-                                    await provider.send(
-                                      "eth_requestAccounts",
-                                      [],
-                                    );
-                                    const signer = provider.getSigner();
-                                    const memlayerTokenContract =
-                                      new ethers.Contract(
-                                        rune["lifts"][0].contractAddress,
-                                        MemlayerTokenABI,
-                                        signer,
-                                      );
+                                        const provider =
+                                          new ethers.providers.Web3Provider(
+                                            window.ethereum,
+                                            "any",
+                                          );
+                                        await provider.send(
+                                          "eth_requestAccounts",
+                                          [],
+                                        );
+                                        const signer = provider.getSigner();
+                                        const memlayerTokenContract =
+                                          new ethers.Contract(
+                                            rune["lifts"][0].contractAddress,
+                                            MemlayerTokenABI,
+                                            signer,
+                                          );
 
-                                    await this.addChainToWallet(
-                                      rune["lifts"][0].chainId,
-                                      rune["lifts"][0].chain,
-                                      rune["lifts"][0].chainRPC,
-                                      rune["lifts"][0].iconUri,
-                                      rune["lifts"][0].ticker,
-                                      rune["lifts"][0].ticker,
-                                      18,
-                                      rune["lifts"][0].explorer,
-                                    );
+                                        await this.addChainToWallet(
+                                          rune["lifts"][0].chainId,
+                                          rune["lifts"][0].chain,
+                                          rune["lifts"][0].chainRPC,
+                                          rune["lifts"][0].iconUri,
+                                          rune["lifts"][0].ticker,
+                                          rune["lifts"][0].ticker,
+                                          18,
+                                          rune["lifts"][0].explorer,
+                                        );
 
-                                    const tx =
-                                      await memlayerTokenContract.withdrawToBTC(
-                                        ethers.utils.parseUnits("100", "ether"),
-                                      );
-                                    await tx.wait();
+                                        const tx =
+                                          await memlayerTokenContract.withdrawToBTC(
+                                            ethers.utils.parseUnits(
+                                              "100",
+                                              "ether",
+                                            ),
+                                          );
+                                        await tx.wait();
 
-                                    const {
-                                      erc20Balances,
-                                      pendingWithdraws,
-                                      finalizedWithdraws,
-                                    } = await this.refreshErc20Balances(
-                                      signer.getAddress(),
-                                      runes,
-                                    );
-                                    nowWithdrawing[i] = false;
-                                    this.setState({
-                                      isWithdrawing: nowWithdrawing,
-                                      erc20Balances,
-                                      pendingWithdraws,
-                                      finalizedWithdraws,
-                                    });
-                                  }}
-                                >
-                                  {isWithdrawing[i]
-                                    ? `Requesting L1 withdraw...`
-                                    : `Withdraw TX`}
-                                </button>
-                              )}
-                              <br />
-                              <br />
-                              <br />
-                            </span>
-                          ))}
+                                        const {
+                                          erc20Balances,
+                                          pendingWithdraws,
+                                          finalizedWithdraws,
+                                          claimedBalances,
+                                          unconfirmedRunicBalances,
+                                        } = await this.refreshErc20Balances(
+                                          signer.getAddress(),
+                                          runes,
+                                        );
+                                        nowWithdrawing[i] = false;
+                                        this.setState({
+                                          isWithdrawing: nowWithdrawing,
+                                          erc20Balances,
+                                          pendingWithdraws,
+                                          finalizedWithdraws,
+                                          claimedBalances,
+                                          unconfirmedRunicBalances,
+                                        });
+                                      }}
+                                    >
+                                      {isWithdrawing[i]
+                                        ? `Requesting L1 withdraw...`
+                                        : `Withdraw TX`}
+                                    </button>
+                                  )}
+                                  <br />
+                                  <br />
+                                  <br />
+                                </span>
+                              ),
+                          )}
 
                           <button
                             // style={{ cursor: canClaim ? "pointer" : "not-allowed" }}
@@ -781,6 +895,8 @@ class Main extends Component {
                                   erc20Balances,
                                   pendingWithdraws,
                                   finalizedWithdraws,
+                                  claimedBalances,
+                                  unconfirmedRunicBalances,
                                 } = await this.refreshErc20Balances(
                                   ethAddress,
                                   runes,
@@ -792,6 +908,8 @@ class Main extends Component {
                                   erc20Balances,
                                   pendingWithdraws,
                                   finalizedWithdraws,
+                                  claimedBalances,
+                                  unconfirmedRunicBalances,
                                 });
 
                                 setTimeout(() => {
