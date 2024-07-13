@@ -286,7 +286,7 @@ export function makeApp(privateKey: string, path: string) {
           console.log('claimable balance', balance, runeInfo['chain']);
 
           let gasSettings = {}
-          if (runeInfo['chain'] === "rskTestnet") {
+          if (runeInfo['chain'] === "RootstockTestnet") {
             
           } else if (runeInfo['chain'] === "awsaga") {
             gasSettings = {
@@ -301,7 +301,7 @@ export function makeApp(privateKey: string, path: string) {
           }
           const tx = await MemlayerToken.connect(funcSigner).liftRunes(
             ethAddress,
-            100, gasSettings
+            Math.floor(balance), gasSettings
           );
           await tx.wait();
         }
