@@ -27,6 +27,10 @@ module.exports = {
     localhost: {
       url: "http://127.0.0.1:8545",
     },
+    awsaga: {
+      url: `https://anotherworld-2712669395139000-1.jsonrpc.sagarpc.io`,
+      accounts:[`0x${process.env.DEPLOYER_PKEY}`]
+    },
     rskTestnet: {
       url: `https://rpc.testnet.rootstock.io/${process.env.RSKTESTNET_RPC_KEY}`,
       chainId: 31,
