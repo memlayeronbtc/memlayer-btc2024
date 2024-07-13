@@ -22,7 +22,13 @@ We created an **easy** and **fast** way to lift BTC runes to any EVM chains. Her
 
 2. S/he will pair their BTC and ETH addresses by signing in both BTC and ETH wallets.
 
+![image](https://github.com/user-attachments/assets/a85b40de-7303-416e-86f7-28e4661ac8dc)
+
+
 3. The user will see a list of available BTC runes and a BTC rune deposit address.
+
+![image](https://github.com/user-attachments/assets/0a8152ff-e5ae-45fd-b249-4ff289492108)
+
 
 4. The user sends the supported BTC runes to the BTC deposit address. As soon as this TX enters the mempool, Memlayer's CCIP gateway server picks it up 
 
