@@ -3,7 +3,7 @@ This gateway server should be deployed on a public server (e.g., AWS EC2 linux) 
 
 ## quick start
 1. `npm i` (node 18)
-2. setup `.env`
+2. setup `.env` based on [`.env-server`](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/gateway-server/.env-server)
 3. `yarn start`
 
 ## aws deployment (hackathon server)
