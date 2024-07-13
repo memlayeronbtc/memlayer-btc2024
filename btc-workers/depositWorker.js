@@ -9,16 +9,16 @@ const isMainnet = true;
 var sentTransactions = [];
 
 // get ETH address from BTC ord address assuming they paired before
-async function getEthAddress(senderAddress_) {
-  const url = `${firebaseServerUri}/getoffchainpairing?runeAddress=${senderAddress_}`;
-  const res = await axios.get(url);
-  const resJson = res.data;
-  if (resJson.ethAddress) {
-    return resJson.ethAddress;
-  } else {
-    return null;
-  }
-}
+// async function getEthAddress(senderAddress_) {
+//   const url = `${firebaseServerUri}/getoffchainpairing?runeAddress=${senderAddress_}`;
+//   const res = await axios.get(url);
+//   const resJson = res.data;
+//   if (resJson.ethAddress) {
+//     return resJson.ethAddress;
+//   } else {
+//     return null;
+//   }
+// }
 
 // based on receiving address, get a list of TXs with sender addresses and rawTX for further processing
 function getTransactionInfo(depositAddress_, isMainnet, sentTransactions_) {
@@ -118,7 +118,7 @@ function sleep(ms) {
 
 // ask server to lift rune received to EVM
 async function postTransactionInfo(
-  ethAddress_,
+  // ethAddress_,
   runeAddress_,
   runeId_,
   amount_,
@@ -126,7 +126,7 @@ async function postTransactionInfo(
 ) {
   var data = {
     passcode: "dbeb0hfde3acc323",
-    ethAddress: ethAddress_,
+    // ethAddress: ethAddress_,
     runeAddress: runeAddress_,
     runeId: runeId_,
     amount: amount_,
@@ -165,12 +165,12 @@ async function postTransactionInfo(
       if (!returnRune) {
         transactions.splice(i, 1);
       } else {
-        const ethaddress = await getEthAddress(transactions[i].senderAddress);
+        // const ethaddress = await getEthAddress(transactions[i].senderAddress);
 
-        if (ethaddress) {
-          transactions[i].ethaddress = ethaddress;
-          // console.log("ethaddress", ethaddress);
-        }
+        // if (ethaddress) {
+        //   transactions[i].ethaddress = ethaddress;
+        //   // console.log("ethaddress", ethaddress);
+        // }
         transactions[i].amount = returnRune.amount;
         transactions[i].runeId = returnRune.runeId;
       }
@@ -180,11 +180,12 @@ async function postTransactionInfo(
     // break;
     for (const transaction of transactions) {
       await postTransactionInfo(
-        transaction.ethAddress,
+        // transaction.ethAddress,
         transaction.senderAddress,
         transaction.amount,
         transaction.runeId,
-        transaction.transactionId
+        transaction.transactionId,
+        transaction.confirmations
       );
       sentTransactions.push(transaction.transactionId);
       await sleep(2000);
