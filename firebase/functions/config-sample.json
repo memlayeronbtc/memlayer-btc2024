@@ -1,0 +1,21 @@
+{
+  "db": {
+    "uri": "Firebase_realtime_db_uri"
+  },
+  "infura": {
+    "apikey": "Infura_api_key"
+  },
+  "rootstock": {
+    "apikey": "Rootstock_api_key"
+  },
+  "passcode": {
+    "liftturborunes": "",
+    "pairing": "",
+    "withdraw": "",
+    "pushbatchtxs": "",
+    "claim": ""
+  },
+  "operator": {
+    "pkey": "Operator_private_key_for_managing_ETH_contracts"
+  }
+}
