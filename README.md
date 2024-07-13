@@ -1,15 +1,14 @@
 
 
 ![memlayerlogo0](https://github.com/user-attachments/assets/5fb581af-dc9b-436c-9f72-898a2cd67455)
-<img src=https://github.com/user-attachments/assets/b631e6df-2d0b-4f7e-be70-6241ec56742a height=256 />
+[<img src=https://github.com/user-attachments/assets/b631e6df-2d0b-4f7e-be70-6241ec56742a height=256 />](https://b.tc/conference/2024/bitcoin-games)
 # memlayer-btc2024
-Memlayer lifts BTC runes to EVM erc20 directly from Mempool built with a BTC full node and CCIP-read gateway. This is a submission for the Bitcoin Games 2024 hackathon - sidechain category.
+Memlayer lifts BTC runes to EVM sidechain erc20 tokens directly from BTC mempool. This is a submission for the [Bitcoin Games 2024 hackathon](https://b.tc/conference/2024/bitcoin-games) - sidechain category.
 
 ## description
-Memlayer makes BTC mempool TXs, blocks, and runes data accessible by smart contracts on EVM sidechains. For example, when a user deposits BTC runes to a BTC address, Memlayer lifts this TX to Rootstack, Alys, or other EVM chains so that the user can further utilize this rune as an ERC-20 token. Memlayer is built based on the Cross-Chain Interoperability Protocol (CCIP) as CCIP-read gateways on top of a BTC mempool and block data (e.g., a BTC full node). For BTC runes with TURBO flags, Memlayer instantly lifts the rune amount and distributes the ERC-20 amount but with a transfer limit till L1 deposit confirmation.
+Memlayer makes BTC mempool TXs, blocks, and runes data accessible by smart contracts on EVM sidechains. For example, when a user deposits BTC runes to a BTC address, Memlayer lifts this TX to **[Rootstack](https://rootstock.io/)**, **[Alys](https://github.com/AnduroHackathon/Alys)**, or other EVM chains so that the user can further utilize this rune as an ERC-20 token. Memlayer is built based on the Cross-Chain Interoperability Protocol (CCIP) as CCIP-read gateways on top of a BTC mempool and block data (e.g., a BTC full node). For BTC runes with TURBO flags, Memlayer instantly lifts the rune amount and distributes the ERC-20 amount but with a transfer limit till L1 deposit confirmation.
 
-![Memlayer (1)](https://github.com/user-attachments/assets/9b55236e-c811-4280-a8fe-54248cc03bca)
-
+![Memlayer (3)](https://github.com/user-attachments/assets/a99c45a1-0a5e-4724-9b0f-ba83d3d04d90)
 
 ## Inspiration for Memlayer
 1. **BTC runes** unlocked a new way of using Bitcoin since the 4th-halving block 840000. We were planning to integrate runes into our web3 game prototype. However, **adding utilities to BTC runes on Bitcoin L1 is hard**. What if there is an easy, fast, and secure way for rune-related projects to utilize BTC runes on any EVM chains where they'd like to build further usages?
@@ -25,15 +24,20 @@ We created an **easy** and **fast** way to lift BTC runes to any EVM chains. Her
 
 2. S/he will pair their BTC and ETH addresses by signing in both BTC and ETH wallets.
 
-![image](https://github.com/user-attachments/assets/a85b40de-7303-416e-86f7-28e4661ac8dc)
-
+![image](https://github.com/user-attachments/assets/e012786d-a88d-4e92-87f0-add6517b6256)
 
 3. The user will see a list of available BTC runes and a BTC rune deposit address.
 
 ![image](https://github.com/user-attachments/assets/0a8152ff-e5ae-45fd-b249-4ff289492108)
 
+4. The user sends the supported BTC runes to the BTC deposit address. As soon as this TX enters the mempool, Memlayer server picks it up and sends out ERC20 rune tokens. After few seconds, ERC20 rune tokens arrived in user's ETH wallet. However, **these tokens cannot be transferred until the BTC L1 rune deposit TX is confirmed (enforced by smart contracts)**.
 
-4. The user sends the supported BTC runes to the BTC deposit address. As soon as this TX enters the mempool, Memlayer's CCIP gateway server picks it up 
+![mem0001a](https://github.com/user-attachments/assets/ce8306e9-afe4-4b33-8542-b167dd02e87c)
+
+![mem0001](https://github.com/user-attachments/assets/a0bb1079-a2f0-407d-854d-097de65cea83)
+
+![mem0001b](https://github.com/user-attachments/assets/c8d18409-ce94-4961-a02f-c9ae081c4e8a)
+
 
 ## sidechain track challenges
 Memlayer addresses the following challenges:
