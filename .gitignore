@@ -12,3 +12,4 @@ cache
 *.dbg.json
 
 evm-contracts/package-lock.json
+btc-workers/package-lock.json
