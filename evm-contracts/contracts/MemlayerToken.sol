@@ -1,4 +1,7 @@
-//SPDX-License-Identifier: Unlicense
+//SPDX-License-Identifier: MIT license
+
+// Memlayer ERC20 token w. CCIP-read BTC rune balance
+
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
