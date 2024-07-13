@@ -623,9 +623,6 @@ parseBalance = async (runeAddress, result) => {
           unconfirmed: unconfirmedBalance,
           confirmed: confirmedBalance,
           symbol: v.symbol,
-          // chainRPC: v.chainRPC,
-          // contractAddress: v.contractAddress,
-          // chain: v.chain,
           lifts: v.lifts,
           number: v.number,
           local: v.local,
@@ -993,10 +990,10 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
         console.log("checking...", rune.ticker);
         console.log(rune);
 
-        if (!(rune && rune.turbo)) {
+        if (!(rune && rune.noClaimTurbo)) {
           return res.status(200).send({
             success: false,
-            msg: "can only lift whitelisted TURBO runes",
+            msg: "can only lift whitelisted TURBO+ runes",
           });
         }
 
