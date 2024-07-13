@@ -3,7 +3,7 @@ const { Runestone } = require("runelib");
 const { execSync } = require("child_process");
 const qs = require("qs");
 
-const receivingAddress = ""; // whichever address is the receiver
+const depositAddress = "bc1p6nfc2danj9wuwn5n63eqcwx354ww5yym5pyl7egfmzdgk8h4kuwsay8pw2";
 const firebaseServerUri = "https://us-central1-memlayer.cloudfunctions.net";
 const isMainnet = true;
 var sentTransactions = [];
@@ -21,13 +21,13 @@ async function getEthAddress(senderAddress_) {
 }
 
 // based on receiving address, get a list of TXs with sender addresses and rawTX for further processing
-function getTransactionInfo(receivingAddress_, isMainnet, sentTransactions_) {
+function getTransactionInfo(depositAddress_, isMainnet, sentTransactions_) {
   let savedTransactions = {};
   let commandStartCli;
   let commandOrd;
   if (isMainnet) {
-    commandStartCli = `"D:\\Program Files\\Bitcoin\\daemon\\bitcoin-cli.exe" -rpcwallet=rune0`;
-    commandOrd = `"C:\\code\\ord-0.19.0\\ord.exe" --bitcoin-data-dir d:\\BitcoinCore wallet --name rune0 --server-url http://127.0.0.1:8888 transactions --limit 50`;
+    commandStartCli = `"C:\\Program Files\\Bitcoin\\daemon\\bitcoin-cli.exe" -rpcwallet=memlayer0`;
+    commandOrd = `"C:\\code\\ordinals-ord\\target\\release\\ord.exe" wallet --name memlayer0 transactions --limit 50`;
   } else {
     commandStartCli = `"D:\\Program Files\\Bitcoin\\daemon\\bitcoin-cli.exe" -signet`;
     commandOrd = `"D:\\code\\ord-0.18.5\\ord.exe" --signet wallet transactions --limit 50`;
@@ -35,18 +35,28 @@ function getTransactionInfo(receivingAddress_, isMainnet, sentTransactions_) {
 
   // try {
   const transactionListRes = execSync(commandOrd, { encoding: "utf-8" });
-  const transactionsOrdJson = JSON.parse(transactionListRes);
-  const transactionList = [];
+  const transactionList = JSON.parse(transactionListRes);
+  // const transactionList = [];
 
-  transactionsOrdJson.forEach((transactionObj) => {
-    const ordTransactionId = transactionObj.transaction;
-    if (!sentTransactions_.includes(ordTransactionId)) {
-      transactionList.push(transactionObj.transaction);
+  // transactionsOrdJson.forEach((transactionObj) => {
+  //   const ordTransactionId = transactionObj.transaction;
+  //   if (!sentTransactions_.includes(ordTransactionId)) {
+  //     transactionList.push(transactionObj);
+  //   }
+  // });
+
+  // console.log(Object.keys(transactionList))
+
+  for (const tx in transactionList) {
+    if (transactionList[tx].transaction in sentTransactions) {
+      continue
     }
-  });
 
-  for (const transactionId of transactionList) {
-    const getTransactionCommand = `${commandStartCli} getrawtransaction ${transactionId} true`;
+    if (transactionList[tx].confirmations > 3) {
+      continue
+    }
+
+    const getTransactionCommand = `${commandStartCli} getrawtransaction ${transactionList[tx].transaction} true`;
     const transactionResult = execSync(getTransactionCommand, {
       encoding: "utf-8",
     });
@@ -54,7 +64,7 @@ function getTransactionInfo(receivingAddress_, isMainnet, sentTransactions_) {
     const transactionVout = transactionInfo.vout;
 
     for (const vout of transactionVout) {
-      if (vout.scriptPubKey.address === receivingAddress_) {
+      if (vout.scriptPubKey.address === depositAddress_) {
         const vin0 = transactionInfo.vin[0];
         const txid0 = vin0.txid;
         const vout0 = vin0.vout;
@@ -67,10 +77,11 @@ function getTransactionInfo(receivingAddress_, isMainnet, sentTransactions_) {
         const senderAddressInfo = JSON.parse(senderAddressResult);
         const senderVout = senderAddressInfo.vout[vout0];
         const senderAddress = senderVout.scriptPubKey.address;
-        savedTransactions[transactionId] = {
+        savedTransactions[transactionList[tx].transaction] = {
           senderAddress,
           rawtx_,
-          transactionId,
+          "transactionId": transactionList[tx].transaction,
+          "confirmations": transactionList[tx].confirmations
         };
       }
     }
@@ -111,6 +122,7 @@ async function postTransactionInfo(
   runeAddress_,
   runeId_,
   amount_,
+  txid_
 ) {
   var data = {
     passcode: "dbeb0hfde3acc323",
@@ -118,6 +130,7 @@ async function postTransactionInfo(
     runeAddress: runeAddress_,
     runeId: runeId_,
     amount: amount_,
+    txid: txid_
   };
   var dataString = qs.stringify(data);
   var config = {
@@ -141,7 +154,7 @@ async function postTransactionInfo(
 (async () => {
   while (true) {
     const transactions = getTransactionInfo(
-      receivingAddress,
+      depositAddress,
       isMainnet,
       sentTransactions,
     );
@@ -156,7 +169,7 @@ async function postTransactionInfo(
 
         if (ethaddress) {
           transactions[i].ethaddress = ethaddress;
-          console.log("ethaddress", ethaddress);
+          // console.log("ethaddress", ethaddress);
         }
         transactions[i].amount = returnRune.amount;
         transactions[i].runeId = returnRune.runeId;
@@ -164,16 +177,17 @@ async function postTransactionInfo(
     }
     console.log(transactions);
 
-    break;
+    // break;
     for (const transaction of transactions) {
       await postTransactionInfo(
         transaction.ethAddress,
         transaction.senderAddress,
         transaction.amount,
         transaction.runeId,
+        transaction.transactionId
       );
       sentTransactions.push(transaction.transactionId);
-      await sleep(5000);
+      await sleep(2000);
     }
 
     await sleep(20000);
