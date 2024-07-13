@@ -8,7 +8,8 @@ Memlayer lifts BTC runes to EVM erc20 directly from Mempool built with a BTC ful
 ## description
 Memlayer makes BTC mempool TXs, blocks, and runes data accessible by smart contracts on EVM sidechains. For example, when a user deposits BTC runes to a BTC address, Memlayer lifts this TX to Rootstack, Alys, or other EVM chains so that the user can further utilize this rune as an ERC-20 token. Memlayer is built based on the Cross-Chain Interoperability Protocol (CCIP) as CCIP-read gateways on top of a BTC mempool and block data (e.g., a BTC full node). For BTC runes with TURBO flags, Memlayer instantly lifts the rune amount and distributes the ERC-20 amount but with a transfer limit till L1 deposit confirmation.
 
-![Memlayer](https://github.com/user-attachments/assets/f47ec099-87b9-402e-abac-73be7dd08a9b)
+![Memlayer (1)](https://github.com/user-attachments/assets/9b55236e-c811-4280-a8fe-54248cc03bca)
+
 
 ## Inspiration for Memlayer
 1. **BTC runes** unlocked a new way of using Bitcoin since the 4th-halving block 840000. We were planning to integrate runes into our web3 game prototype. However, **adding utilities to BTC runes on Bitcoin L1 is hard**. What if there is an easy, fast, and secure way for rune-related projects to utilize BTC runes on any EVM chains where they'd like to build further usages?
