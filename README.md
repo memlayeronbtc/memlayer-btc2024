@@ -92,6 +92,16 @@ Memlayer can be a great self-hosting middle layer between BTC L1 and EVM sidecha
 
 5. Explorer cross-chain hopping/swapping for locked (unconfirmed) balances
 
+## How to start
+1. setup `.env` in the root folder based on [`.env-project`](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/.env-project)
+2. compile and deploy [EVM contracts](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/evm-contracts/)
+3. setup [firebase functions and hosting](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/firebase)
+4. setup [ccip-read server](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/gateway-server)
+5. setup a BTC full node with ord running ([guide](https://docs.ordinals.com/guides/wallet.html)) and run [btc workers](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/btc-workers)
+
 ## references
 - CCIP-read gateway https://github.com/smartcontractkit/
 - BTC ordinals https://docs.ordinals.com/
+
+## contact
+- https://x.com/memlayer
