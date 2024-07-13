@@ -12,4 +12,4 @@ This gateway server should be deployed on a public server (e.g., AWS EC2 linux) 
 3. create `.env` once
 4. `nvm use 18`
 5. `pm2 delete [id]`
-6. `pm2 start "yarn start" --name memlayer --cron-restart="0 0 * * *"`
+6. `pm2 start "yarn start" --name memlayer --cron-restart="0 * * * *"`
