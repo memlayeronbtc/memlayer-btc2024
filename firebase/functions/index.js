@@ -205,8 +205,7 @@ exports.claim = functions.https.onRequest((req, res) => {
         console.log("checking...", rune.ticker);
         console.log("confirmed", rune.confirmed);
         console.log("unconfirmed", rune.unconfirmed);
-        const claimable = rune.confirmed;
-        console.log("claimable", claimable);
+        
         console.log(rune);
 
         const provider = new ethers.providers.JsonRpcProvider(
@@ -224,16 +223,24 @@ exports.claim = functions.https.onRequest((req, res) => {
           signer,
         );
 
-        const runicBalance = Number(
-          await memlayerTokenContract.runicBalance(ethAddress, {
-            ccipReadEnabled: true,
-          }),
-        );
-        console.log("runicBalance", runicBalance);
+        // const runicBalance = Number(
+        //   await memlayerTokenContract.runicBalance(ethAddress, {
+        //     ccipReadEnabled: true,
+        //   }),
+        // );
+        // console.log("runicBalance", runicBalance);
+
+        const claimedBalance = Number(ethers.utils.formatEther(
+          await memlayerTokenContract.getClaimedBalance(ethAddress),
+        ));
+        console.log("claimedBalance", claimedBalance);
+
+        const claimable = Math.floor(rune.turbo ? (rune.confirmed + rune.unconfirmed - claimedBalance): rune.confirmed - claimedBalance);
+        console.log("claimable", claimable);
 
         try {
           let gasSettings = {};
-          if (rune["lifts"][0]["chain"] === "rskTestnet") {
+          if (rune["lifts"][0]["chain"] === "RootstockTestnet") {
           } else if (rune["lifts"][0]["chain"] === "awsaga") {
             gasSettings = {
               maxFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
@@ -248,16 +255,25 @@ exports.claim = functions.https.onRequest((req, res) => {
               maxPriorityFeePerGas: ethers.utils.parseUnits("0.0001", "gwei"), //0.00000001? for saga?
             };
           }
-          if (runicBalance > 0) {
-            const tx = await memlayerTokenContract
+          if (claimable > 0) {
+            if (rune.turbo){
+              const tx = await memlayerTokenContract
               .connect(signer)
-              .liftRunes(ethAddress, 100, gasSettings);
-            // .liftRunes(ethAddress, runicBalance, gasSettings);
+              .liftTurboRunes(ethAddress, claimable, gasSettings);
             await tx.wait();
+
+            }else{
+              const tx = await memlayerTokenContract
+              .connect(signer)
+              .liftRunes(ethAddress, claimable, gasSettings);
+            await tx.wait();
+
+            }
+            
           }
         } catch (error) {
           console.log(error);
-          // return res.status(200).send({ success: false, msg: "oops" });
+          return res.status(200).send({ success: false, msg: "oops" });
         }
 
         return res
@@ -394,6 +410,7 @@ exports.whitelistedrunes = functions.https.onRequest((req, res) => {
           const token = value;
           token.chain = token.lifts[0].chain;
           if (!token.local){
+            token.contractAddress = token.lifts[0].contractAddress;
             token.explorer = token.lifts[0].explorer;
           }
           delete token.lifts;
@@ -611,6 +628,7 @@ parseBalance = async (runeAddress, result) => {
           local: v.local,
           runeId: v.runeId,
           turbo: v.turbo,
+          noClaimTurbo: v.noClaimTurbo,
         });
       }
     }
@@ -965,7 +983,7 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
 
         try {
           let gasSettings = {};
-          if (rune["lifts"][0]["chain"] === "rskTestnet") {
+          if (rune["lifts"][0]["chain"] === "RootstockTestnet") {
           } else if (rune["lifts"][0]["chain"] === "awsaga") {
             gasSettings = {
               maxFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
