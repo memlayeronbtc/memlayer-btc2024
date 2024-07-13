@@ -124,12 +124,12 @@ exports.pairing = functions.https.onRequest((req, res) => {
           msg: "paired",
         };
 
-        admin
+        await admin
           .database()
           .ref(`/ordUserCredential/${runeAddress.toLowerCase()}`)
           .update(updateData);
 
-        admin
+        await admin
           .database()
           .ref(`/ethUserCredential/${ethAddress.toLowerCase()}`)
           .update(updateData);
@@ -145,15 +145,15 @@ exports.pairing = functions.https.onRequest((req, res) => {
   });
 });
 
-// pairing for memlayer
-exports.checkpairing = functions.https.onRequest((req, res) => {
-  cors(req, res, async () => {
-    return res.status(200).send({
-      success: false,
-      msg: "invalid",
-    });
-  });
-});
+// // pairing for memlayer
+// exports.checkpairing = functions.https.onRequest((req, res) => {
+//   cors(req, res, async () => {
+//     return res.status(200).send({
+//       success: false,
+//       msg: "invalid",
+//     });
+//   });
+// });
 
 // TODO: make it more generic to claim any claimable balance
 exports.claim = functions.https.onRequest((req, res) => {
@@ -205,7 +205,7 @@ exports.claim = functions.https.onRequest((req, res) => {
         console.log("checking...", rune.ticker);
         console.log("confirmed", rune.confirmed);
         console.log("unconfirmed", rune.unconfirmed);
-        
+
         console.log(rune);
 
         const provider = new ethers.providers.JsonRpcProvider(
@@ -230,12 +230,18 @@ exports.claim = functions.https.onRequest((req, res) => {
         // );
         // console.log("runicBalance", runicBalance);
 
-        const claimedBalance = Number(ethers.utils.formatEther(
-          await memlayerTokenContract.getClaimedBalance(ethAddress),
-        ));
+        const claimedBalance = Number(
+          ethers.utils.formatEther(
+            await memlayerTokenContract.getClaimedBalance(ethAddress),
+          ),
+        );
         console.log("claimedBalance", claimedBalance);
 
-        const claimable = Math.floor(rune.turbo ? (rune.confirmed + rune.unconfirmed - claimedBalance): rune.confirmed - claimedBalance);
+        const claimable = Math.floor(
+          rune.turbo
+            ? rune.confirmed + rune.unconfirmed - claimedBalance
+            : rune.confirmed - claimedBalance,
+        );
         console.log("claimable", claimable);
 
         try {
@@ -256,20 +262,17 @@ exports.claim = functions.https.onRequest((req, res) => {
             };
           }
           if (claimable > 0) {
-            if (rune.turbo){
+            if (rune.turbo) {
               const tx = await memlayerTokenContract
-              .connect(signer)
-              .liftTurboRunes(ethAddress, claimable, gasSettings);
-            await tx.wait();
-
-            }else{
+                .connect(signer)
+                .liftTurboRunes(ethAddress, claimable, gasSettings);
+              await tx.wait();
+            } else {
               const tx = await memlayerTokenContract
-              .connect(signer)
-              .liftRunes(ethAddress, claimable, gasSettings);
-            await tx.wait();
-
+                .connect(signer)
+                .liftRunes(ethAddress, claimable, gasSettings);
+              await tx.wait();
             }
-            
           }
         } catch (error) {
           console.log(error);
@@ -409,7 +412,7 @@ exports.whitelistedrunes = functions.https.onRequest((req, res) => {
         for (const [key, value] of Object.entries(result)) {
           const token = value;
           token.chain = token.lifts[0].chain;
-          if (!token.local){
+          if (!token.local) {
             token.contractAddress = token.lifts[0].contractAddress;
             token.explorer = token.lifts[0].explorer;
           }
@@ -915,18 +918,27 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
         const data = req.body;
 
         const passcode = data.passcode;
-        const ethAddress = data.ethAddress;
+        // const ethAddress = data.ethAddress;
         const runeAddress = data.runeAddress;
         const runeId = data.runeId;
+        const transactionId = data.transactionId;
+        const confirmations = Number(data.confirmations);
         const amount = Number(data.amount);
-        const release = data.release === "true" ? true : false;
 
         if (
+          !runeId ||
+          !transactionId ||
           !amount ||
           !passcode ||
           passcode !== functions.config().passcode.liftturborunes
         ) {
           return res.status(200).send({ success: false, msg: "invalid input" });
+        }
+
+        if (amount < 1) {
+          return res
+            .status(200)
+            .send({ success: false, msg: "invalid amount" });
         }
 
         if (!runeAddress?.startsWith("bc1p")) {
@@ -936,35 +948,57 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
           });
         }
 
-        if (!ethers.utils.isAddress(ethAddress)) {
-          console.log("invalid ethAddress");
+        const snapshot1 = await admin
+          .database()
+          .ref(`/liftedTXs/${transactionId}`)
+          .once("value");
+        const liftedTX = snapshot1.val();
+        const wasLifted = liftedTX ? liftedTX.wasLifted : false;
+        const wasReleased = liftedTX ? liftedTX.wasReleased : false;
+        if (wasReleased) {
           return res.status(200).send({
             success: false,
-            msg: "invalid ethAddress",
+            msg: "tx lifted and released",
           });
         }
+        const willRelease =
+          confirmations > 0 ? (wasLifted ? true : false) : false;
 
+        const snapshot0 = await admin
+          .database()
+          .ref(`/ordUserCredential/${runeAddress.toLowerCase()}`)
+          .once("value");
+        const result0 = snapshot0.val();
+        console.log(result0);
+        if (!(result0 && result0.ethAddress)) {
+          return res.status(200).send({
+            success: false,
+            msg: "invalid btc/eth pair",
+          });
+        }
+        const ethAddress = result0.ethAddress;
         console.log("lift to EVM address", ethAddress);
 
-        const result = await getbalancedb(runeAddress);
-        const { claimables, runesData } = await parseBalance(
-          runeAddress,
-          result,
-        );
+        const snapshot = await admin.database().ref(`/lifting/`).once("value");
+        const result = snapshot.val();
 
-        let rune;
-        for (const index in runesData) {
-          if (runesData[index].runeId === runeId) {
-            rune = runesData[index];
+        let rune = {};
+        for (const [key, value] of Object.entries(result)) {
+          if (value.runeId === runeId) {
+            rune = value;
             break;
           }
         }
+
         console.log("checking...", rune.ticker);
-        console.log("confirmed", rune.confirmed);
-        console.log("unconfirmed", rune.unconfirmed);
-        const claimable = rune.confirmed;
-        console.log("claimable", claimable);
         console.log(rune);
+
+        if (!(rune && rune.turbo)) {
+          return res.status(200).send({
+            success: false,
+            msg: "can only lift whitelisted TURBO runes",
+          });
+        }
 
         const provider = new ethers.providers.JsonRpcProvider(
           rune["lifts"][0].chainRPC,
@@ -981,52 +1015,76 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
           signer,
         );
 
-        try {
-          let gasSettings = {};
-          if (rune["lifts"][0]["chain"] === "RootstockTestnet") {
-          } else if (rune["lifts"][0]["chain"] === "awsaga") {
-            gasSettings = {
-              maxFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
-              maxPriorityFeePerGas: ethers.utils.parseUnits(
-                "0.00000001",
-                "gwei",
-              ), //0.00000001? for saga?
-            };
-          } else {
-            gasSettings = {
-              maxFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
-              maxPriorityFeePerGas: ethers.utils.parseUnits("0.0001", "gwei"), //0.00000001? for saga?
-            };
-          }
-          if (rune.unconfirmed + rune.confirmed) {
-            if (!release) {
-              const tx = await memlayerTokenContract
-                .connect(signer)
-                .liftTurboRunes(ethAddress, amount, gasSettings);
-              await tx.wait();
-            } else {
-              const tx = await memlayerTokenContract
-                .connect(signer)
-                .releaseTurboRunes(ethAddress, amount, gasSettings);
-              await tx.wait();
-            }
-          }
-        } catch (error) {
-          console.log(error);
-          return res
-            .status(200)
-            .send({ success: false, msg: "oops in lifting" });
+        // try {
+        let gasSettings = {};
+        if (rune["lifts"][0]["chain"] === "RootstockTestnet") {
+        } else if (rune["lifts"][0]["chain"] === "awsaga") {
+          gasSettings = {
+            maxFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
+            maxPriorityFeePerGas: ethers.utils.parseUnits("0.00000001", "gwei"), //0.00000001? for saga?
+          };
+        } else {
+          gasSettings = {
+            maxFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
+            maxPriorityFeePerGas: ethers.utils.parseUnits("0.0001", "gwei"), //0.00000001? for saga?
+          };
         }
 
-        return res
-          .status(200)
-          .send({
-            success: true,
-            ...rune,
-            turboLiftedAmount: amount,
-            isReleased: release,
-            msg: "liftTurboRunes successfully",
-          });
+        if (!wasLifted) {
+          const tx = await memlayerTokenContract
+            .connect(signer)
+            .liftTurboRunes(ethAddress, amount, gasSettings);
+          await tx.wait();
+
+          const updateData = {
+            ordAddress: runeAddress.toLowerCase(),
+            ethAddress: ethAddress.toLowerCase(),
+            lastUpdate: Date.now(),
+            rune,
+            amount,
+            wasLifted: true,
+            wasReleased: false,
+          };
+
+          await admin
+            .database()
+            .ref(`/liftedTXs/${transactionId}`)
+            .update(updateData);
+        }
+        if (willRelease) {
+          const tx = await memlayerTokenContract
+            .connect(signer)
+            .releaseTurboRunes(ethAddress, amount, gasSettings);
+          await tx.wait();
+
+          await admin
+            .database()
+            .ref(`/liftedTXs/${transactionId}/`)
+            .update({ wasReleased: true });
+        }
+
+        const unconfirmedRunicBalance = ethers.utils.formatEther(
+          await memlayerTokenContract
+            .connect(signer)
+            .getUnconfirmedRunicBalance(ethAddress),
+        );
+
+        // } catch (error) {
+        //   console.log(error);
+        //   return res
+        //     .status(200)
+        //     .send({ success: false, msg: "oops in lifting" });
+        // }
+
+        return res.status(200).send({
+          success: true,
+          ...rune,
+          turboLiftedAmount: amount,
+          isReleased: willRelease,
+          confirmations,
+          unconfirmedRunicBalance: Number(unconfirmedRunicBalance),
+          msg: "liftTurboRunes successfully",
+        });
         break;
     }
   });
