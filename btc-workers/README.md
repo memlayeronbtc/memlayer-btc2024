@@ -4,7 +4,8 @@
 btc worker scripts need to be executed on a BTC full-node with [ord](https://docs.ordinals.com/) 
 1. set up a full node and run `ord wallet balance`
 2. update constants based on your own setup e.g., ord path
-3. `python withdrawWorker.py` (`python3`)
+3. `npm i` 
+4. run script `python withdrawWorker.py` or `node deposit worker` (`python3`)
 
 ## how **withdrawWorker.py** works
 1. Requests withdraw transaction information from our Firebase server
