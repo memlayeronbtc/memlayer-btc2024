@@ -114,4 +114,5 @@ It is magical to see BTC runes lifted to EVM chains in seconds using Memlayer. T
 - BTC whitepaper https://bitcoin.org/bitcoin.pdf
 
 ## Contact
-- https://x.com/memlayer
+- follow us at https://x.com/memlayer
+- submit BTC rune and EVM chain pairing requests https://forms.gle/M7andtTA1pJ1QzxW6
