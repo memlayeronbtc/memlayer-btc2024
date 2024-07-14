@@ -1,9 +1,10 @@
 const { Runestone } = require("runelib");
 const { execSync } = require("child_process");
+require('dotenv').config({ path: '../.env' });
+const { RUNE_DEPOSIT_ADDRESS, SERVERLESS_URI, PASSCODE_LIFTTURBORUNES } = process.env;
 
-const depositAddress =
-  "bc1p6nfc2danj9wuwn5n63eqcwx354ww5yym5pyl7egfmzdgk8h4kuwsay8pw2";
-const firebaseServerUri = "https://us-central1-memlayer.cloudfunctions.net";
+const depositAddress = RUNE_DEPOSIT_ADDRESS;
+const firebaseServerUri = SERVERLESS_URI;
 const isMainnet = false;
 var sentTransactions = [];
 
@@ -100,7 +101,7 @@ async function postTransactionInfo(
   confirmations_,
 ) {
   const data = {
-    passcode: "dbeb0hfde3acc323",
+    passcode: PASSCODE_LIFTTURBORUNES,
     runeAddress: runeAddress_,
     runeId: runeId_,
     amount: amount_,
