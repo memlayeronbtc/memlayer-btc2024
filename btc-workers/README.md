@@ -7,7 +7,7 @@ btc worker scripts need to be executed on a BTC full-node with [ord](https://doc
 3. `python withdrawWorker.py` (`python3`)
 
 ## how **withdrawWorker.py** works
-1. Requests withdraw transaction information from https://us-central1-memlayer.cloudfunctions.net/getwithdrawreq (using test transaction info)
+1. Requests withdraw transaction information from our Firebase server
 2. Checks and deletes transactions the script has already sent (used after the first loop)
 3. Verifies if any remaining transactions need to be sent
 4. Retrieves the rune balance (using ord), checks for sufficient runes, and verifies if the transaction has already been sent
