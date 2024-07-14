@@ -79,7 +79,11 @@ We had to prioritize ease-of-use and speed for this hackathon, and then enhance 
 It is magical to see BTC runes lifted to EVM chains in seconds using Memlayer. This may bring BTC liquidity to EVM sidechain apps for more consumer-level experiences.
 
 ## What we learned
-Memlayer can be a great self-hosting middle layer between BTC L1 and EVM sidechains when using CCIP-read on a BTC full node. This is an interesting direction that is worthy of future investigation.
+1. Memlayer can be a great self-hosting middle layer between BTC L1 and EVM sidechains when using CCIP-read on a BTC full node. This is an interesting direction that is worthy of future investigation.
+
+2. There are still ways we have not explored for improving the speed of the deposit on the system level.
+
+3. The UX part of using CCIP-read gateway server to move balances among BTC and EVM chains can be explored more.
 
 ## What's next for Memlayer
 1. Have security reviews to plan paths for decentralizing more parts and refactor the code base
@@ -91,6 +95,10 @@ Memlayer can be a great self-hosting middle layer between BTC L1 and EVM sidecha
 4. Extend ERC-20 runes with points and gamification
 
 5. Explorer cross-chain hopping/swapping for locked (unconfirmed) balances
+
+6. Add more real-time TX indicators to better showcase the speed as part of the UX
+
+7. Improve the performance of the dashboard
 
 ## How to start
 1. setup `.env` in the root folder based on [`.env-project`](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/.env-project)
