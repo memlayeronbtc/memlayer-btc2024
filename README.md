@@ -107,9 +107,11 @@ It is magical to see BTC runes lifted to EVM chains in seconds using Memlayer. T
 4. setup [ccip-read server](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/gateway-server)
 5. setup a BTC full node with ord running ([guide](https://docs.ordinals.com/guides/wallet.html)) and run [btc workers](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/btc-workers)
 
-## references
-- CCIP-read gateway https://github.com/smartcontractkit/
+## References
+- CCIP-read gateway sample https://github.com/smartcontractkit/
+- ERC-3668 CCIP-read https://eips.ethereum.org/EIPS/eip-3668
 - BTC ordinals https://docs.ordinals.com/
+- BTC whitepaper https://bitcoin.org/bitcoin.pdf
 
-## contact
+## Contact
 - https://x.com/memlayer
