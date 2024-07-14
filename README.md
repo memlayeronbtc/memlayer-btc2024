@@ -100,7 +100,7 @@ It is magical to see BTC runes lifted to EVM chains in seconds using Memlayer. T
 
 7. Improve the performance of the dashboard
 
-## How to start
+## How to start [for EXPERIMENTAL USE, NOT FOR PRODUCTION]
 1. setup `.env` in the root folder based on [`.env-project`](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/.env-project)
 2. compile and deploy [EVM contracts](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/evm-contracts/)
 3. setup [firebase functions and hosting](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/firebase)
