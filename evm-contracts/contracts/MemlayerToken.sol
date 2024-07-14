@@ -153,6 +153,7 @@ contract MemlayerToken is ERC20, ERC20Burnable, Ownable {
         );
         _mint(addr, balance * 1 ether);
         unconfirmedRunicBalance[addr] += balance * 1 ether;
+        claimedBalance[addr] += balance * 1 ether;
     }
 
     // lift unonfirmed runic balances to erc20 but marked untransferrable
@@ -164,7 +165,6 @@ contract MemlayerToken is ERC20, ERC20Burnable, Ownable {
             "cannot release more"
         );
         unconfirmedRunicBalance[addr] -= balance * 1 ether;
-        claimedBalance[addr] += balance * 1 ether;
     }
 
     // check runic balance with ethAddress
