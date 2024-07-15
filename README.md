@@ -73,7 +73,11 @@ These serverless functions [`index.js`](https://github.com/memlayeronbtc/memlaye
 There are worker scripts directly interacting with a BTC full-node with `ord 0.19.0` for picking up deposit TXs using [`depositWorker.js`](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/btc-workers/depositWorker.js) and sending out withdraw TXs using [`withdrawWorker.py`](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/btc-workers/withdrawWorker.py). BTC worker scripts were written in javascript to decode BTC rune deposit TXs and in python to send out the rune withdraw requests.
 
 ## Challenges we ran into
-We had to prioritize ease-of-use and speed for this hackathon, and then enhance the security aspect for future extensions.
+1. We had to prioritize ease-of-use and speed for this hackathon, and then enhance the security aspect for future extensions.
+
+2. The current Memlayer cannot be deployed using a single script (yet). Currently, it is a multi-part system (i.e., AWS CCIP-read gateway server, Firebase serverless functions, smart contracts, ord scripts and BTC full node) that needs to work _nicely_ all together.
+
+3. Permissionless deposit/withdraw needs to be explored. The current BTC rune depositing and withdrawing process is still too centralized.
 
 ## Accomplishments that we're proud of
 It is magical to see BTC runes lifted to EVM chains in seconds using Memlayer. This may bring BTC liquidity to EVM sidechain apps for more consumer-level experiences.
@@ -88,17 +92,19 @@ It is magical to see BTC runes lifted to EVM chains in seconds using Memlayer. T
 ## What's next for Memlayer
 1. Have security reviews to plan paths for decentralizing more parts and refactor the code base
 
-2. Work with chain partners to integrate Memlayer for public demos
+2. Improve the performance of the dashboard
 
-3. Make CCIP-read gateway more generic to access more BTC block data and mempool TXs
+3. Add more real-time TX indicators to better showcase the speed as part of the UX
 
-4. Extend ERC-20 runes with points and gamification
+4. Work with chain partners to integrate Memlayer for public demos
 
-5. Explorer cross-chain hopping/swapping for locked (unconfirmed) balances
+5. Make CCIP-read gateway more generic to access more BTC block data and mempool TXs
 
-6. Add more real-time TX indicators to better showcase the speed as part of the UX
+6. Extend ERC-20 runes with points and gamification
 
-7. Improve the performance of the dashboard
+7. Explorer cross-chain hopping/swapping for locked (unconfirmed) balances
+
+8. Explore cross-chain liquidity features since EVM rune liquidity may be too fragmented
 
 ## How to start [for EXPERIMENTAL USE, NOT FOR PRODUCTION]
 1. setup `.env` in the root folder based on [`.env-project`](https://github.com/memlayeronbtc/memlayer-btc2024/blob/main/.env-project)
