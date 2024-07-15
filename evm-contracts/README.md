@@ -7,7 +7,8 @@ this is an evm erc20 token contract that access CCIP-read server via contract ca
 - setup chain info in `hardhat.config.js`
 - `npx hardhat test`
 - `npx hardhat run scripts\deploy.js --network rskTestnet` deploy to evm chains
-- setup CCIP-read gateway server and firebase functions
+- setup firebase functions and real-time database, required for CCIP-read gateway to work
+- setup CCIP-read gateway server
 
 ## utility
 `npx prettier --write --plugin=prettier-plugin-solidity contracts`

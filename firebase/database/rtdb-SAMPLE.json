@@ -1,0 +1,44 @@
+{
+  "lifting": {
+    "840000:1698": {
+      "lifts": [
+        {
+          "chain": "RootstockTestnet",
+          "chainId": "0x1F",
+          "chainRPC": "https://rpc.testnet.rootstock.io/APIKEY",
+          "contractAddress": "0x8B0feAa1299e73e9fE682803e9d25718b0d8D7D8",
+          "depositAddress": "DEPOSIT_ADDRESS",
+          "explorer": "https://explorer.testnet.rootstock.io",
+          "iconUri": "https://rootstock.io/favicon-32x32.png",
+          "ticker": "TRBTC"
+        }
+      ],
+      "number": 558,
+      "runeId": "840000:1698",
+      "symbol": "₿",
+      "ticker": "A•PEER•TO•PEER•E•CASH•SYSTEM",
+      "turbo": false
+    },
+    "844247:46": {
+      "lifts": [
+        {
+          "chain": "AlysTestnet",
+          "chainId": "0x33C99",
+          "chainRPC": "http://54.226.158.187",
+          "contractAddress": "0x116Da03Fb01Dc31985b7C88a0cD1b8354C311cfc",
+          "depositAddress": "DEPOSIT_ADDRESS",
+          "explorer": "",
+          "iconUri": "https://avatars.githubusercontent.com/u/171933855?s=48",
+          "ticker": "ALYS"
+        }
+      ],
+      "local": true,
+      "noClaimTurbo": true,
+      "number": 69998,
+      "runeId": "844247:46",
+      "symbol": "ᛗ",
+      "ticker": "MEMLAYER•TOKEN",
+      "turbo": true
+    }
+  }
+}
