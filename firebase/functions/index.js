@@ -43,18 +43,21 @@ const parseRunestone = async (tx) => {
       }
     } else {
       const resHexString = await res.arrayBuffer();
-
       const stone = Runestone.decipher(resHexString);
-      for (const i in stone._value["edicts"]) {
-        const edict = stone._value["edicts"][i];
-        const runeId = `${edict.id.block}:${edict.id.idx}`;
+      if (stone !== null && "_value" in stone) {
+        // console.log(stone)
 
-        runes.push({
-          runeId: runeId,
-          amount: Number(edict.amount),
-        });
+        for (const i in stone._value["edicts"]) {
+          const edict = stone._value["edicts"][i];
+          const runeId = `${edict.id.block}:${edict.id.idx}`;
+
+          runes.push({
+            runeId: runeId,
+            amount: Number(edict.amount),
+          });
+        }
+        result["runes"] = runes;
       }
-      result["runes"] = runes;
     }
   }
   return result;
@@ -1058,3 +1061,169 @@ exports.liftturborunes = functions.https.onRequest((req, res) => {
     }
   });
 });
+
+// cron job to release runes when rune deposit TXs were confirmed
+const checkAndReleaseRunes = async () => {
+  const snapshot = await admin.database().ref(`/liftedTXs/`).once("value");
+  const liftedTXs = snapshot.val();
+  const unlockedTXs = [];
+  for (const tx in liftedTXs) {
+    if (!liftedTXs[tx].wasReleased) {
+      console.log(tx, "was not released");
+      const res0 = await fetch(`https://mempool.space/api/tx/${tx}/status`);
+      const txStatus = await res0.json();
+      if (txStatus.confirmed) {
+        console.log(tx, "should be unlocked");
+        const rune = liftedTXs[tx]["rune"];
+        const ethAddress = liftedTXs[tx]["ethAddress"];
+        const amount = liftedTXs[tx]["amount"];
+        const provider = new ethers.providers.JsonRpcProvider(
+          rune["lifts"][0].chainRPC,
+        );
+
+        const signer = new ethers.Wallet(
+          functions.config().operator.pkey,
+          provider,
+        );
+
+        const memlayerTokenContract = new ethers.Contract(
+          rune["lifts"][0].contractAddress,
+          MemlayerTokenABI,
+          signer,
+        );
+
+        // try {
+        let gasSettings = {};
+        if (rune["lifts"][0]["chain"] === "RootstockTestnet") {
+        } else if (rune["lifts"][0]["chain"] === "awsaga") {
+          gasSettings = {
+            maxFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
+            maxPriorityFeePerGas: ethers.utils.parseUnits("0.00000001", "gwei"), //0.00000001? for saga?
+          };
+        } else {
+          gasSettings = {
+            maxFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
+            maxPriorityFeePerGas: ethers.utils.parseUnits("0.0001", "gwei"), //0.00000001? for saga?
+          };
+        }
+
+        const tx0 = await memlayerTokenContract
+          .connect(signer)
+          .releaseTurboRunes(ethAddress, amount, gasSettings);
+        await tx0.wait();
+
+        await admin
+          .database()
+          .ref(`/liftedTXs/${tx}/`)
+          .update({ wasReleased: true });
+
+        console.log(tx, "unlocked");
+        unlockedTXs.push(tx);
+        // break;
+      }
+    }
+  }
+
+  const snapshot0 = await admin
+    .database()
+    .ref(`/ordUserCredential/`)
+    .once("value");
+  const ordUsers = snapshot0.val();
+  const snapshot1 = await admin.database().ref(`/unconfirmedTX/`).once("value");
+  const unconfirmedTXs = snapshot1.val();
+  const snapshot2 = await admin.database().ref(`/lifting/`).once("value");
+  const lifts = snapshot2.val();
+  for (const tx in unconfirmedTXs) {
+    const runeTX = await parseRunestone(tx);
+    if (runeTX.status.confirmed && runeTX.runes && runeTX.runes.length > 0) {
+      for (let index = 0; index < runeTX.runes.length; index++) {
+        const runeId = runeTX.runes[index].runeId;
+        const amount = runeTX.runes[index].amount;
+        const senderAddress =
+          unconfirmedTXs[tx]["vin"][0]["prevout"][
+            "scriptpubkey_address"
+          ].toLowerCase();
+        const ethAddress = ordUsers[senderAddress].ethAddress;
+        const rune = lifts[runeId];
+        if (!rune.turbo) {
+          continue; // non-turbo rune do not need unlock
+        }
+        // console.log("check", tx, runeId, amount, "if unlocked.", senderAddress, ethAddress, rune)
+        const provider = new ethers.providers.JsonRpcProvider(
+          rune["lifts"][0].chainRPC,
+        );
+
+        const signer = new ethers.Wallet(
+          functions.config().operator.pkey,
+          provider,
+        );
+
+        const memlayerTokenContract = new ethers.Contract(
+          rune["lifts"][0].contractAddress,
+          MemlayerTokenABI,
+          signer,
+        );
+
+        let gasSettings = {};
+        if (rune["lifts"][0]["chain"] === "RootstockTestnet") {
+        } else if (rune["lifts"][0]["chain"] === "awsaga") {
+          gasSettings = {
+            maxFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
+            maxPriorityFeePerGas: ethers.utils.parseUnits("0.00000001", "gwei"), //0.00000001? for saga?
+          };
+        } else {
+          gasSettings = {
+            maxFeePerGas: ethers.utils.parseUnits("0.01", "gwei"),
+            maxPriorityFeePerGas: ethers.utils.parseUnits("0.0001", "gwei"), //0.00000001? for saga?
+          };
+        }
+
+        const unconfirmedRunicBalance = Number(
+          ethers.utils.formatEther(
+            await memlayerTokenContract.getUnconfirmedRunicBalance(ethAddress),
+          ),
+        );
+
+        if (unconfirmedRunicBalance > 0) {
+          const releaseAmount =
+            amount > unconfirmedRunicBalance ? unconfirmedRunicBalance : amount;
+          const tx0 = await memlayerTokenContract
+            .connect(signer)
+            .releaseTurboRunes(ethAddress, releaseAmount, gasSettings);
+          await tx0.wait();
+
+          await admin
+            .database()
+            .ref(`/liftedTXs/${tx}/`)
+            .update({ wasReleased: true });
+
+          unlockedTXs.push(tx);
+        }
+      }
+    }
+  }
+  return unlockedTXs;
+};
+
+// hourly check for releasing confirmed deposits
+exports.unlockConfirmedDepositsCronjob = functions.pubsub
+  .schedule("every 60 minutes")
+  .onRun(async (context) => {
+    const unlockedTXs = await checkAndReleaseRunes();
+    console.log(unlockedTXs);
+  });
+
+// operator finalize withdraw after checking L1 confirmation
+// exports.checkrunedeposits = functions.https.onRequest((req, res) => {
+//   cors(req, res, async () => {
+//     switch (req.method) {
+//       case "GET":
+//         const unlockedTXs = await checkAndReleaseRunes();
+//         return res.status(200).send({
+//           success: true,
+//           unlockedTXs,
+//         });
+//         break;
+//     }
+//   });
+// });
