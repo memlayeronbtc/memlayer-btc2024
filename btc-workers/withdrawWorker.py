@@ -1,10 +1,11 @@
 import subprocess, time, requests, sys, json, pprint
 
-ordPath = "D:\\code\\bitcoin-university\\scripts\\ord.exe"
+ordPath = "C:\\code\\ordinals-ord\\target\\release\\ord.exe"
 url = "https://us-central1-memlayer.cloudfunctions.net/getwithdrawreq"
-isMainnet = False
+isMainnet = True
 willBroadcast = False
 totalTransactionsList = {}
+ordWalletName = "memlayer0" ## default: ord, u need to replace it to the wallet name that funds the withdraws
 
 def getFeeRate():
     response0 = requests.get("http://127.0.0.1/r/blockheight")
@@ -13,7 +14,7 @@ def getFeeRate():
     response = requests.get(f"http://127.0.0.1/r/blockinfo/{blockHeight}")
     response_json = response.json()
     pprint.pprint(response_json)
-    feeRate = round((response_json['median_fee'] / response_json['transaction_count'])+ 0.1, 2)
+    feeRate = int(response_json['feerate_percentiles'][0]) + 0.1
     return feeRate
 
 # sys.exit(1)
@@ -25,6 +26,29 @@ while True:
     i1 = 0
     deleteDupes = []
 
+    if isMainnet:
+        ordCommand = [ordPath, "wallet", "--name", ordWalletName, "balance"]
+    else:
+        ordCommand = [ordPath, "--signet", "wallet", "balance"]
+
+    result = subprocess.run(ordCommand, shell=True, capture_output=True, text=True, encoding="UTF-8")
+    balanceList = json.loads(result.stdout)
+    
+    runesOwned = balanceList['runes']
+    cardinalOwned = balanceList['cardinal']
+    print("runesOwned", runesOwned)
+    print("cardinalOwned", cardinalOwned)
+
+    if len(withdraw_requests) == 0:
+        print("sent all")
+        time.sleep(60)
+        continue
+
+    if cardinalOwned < (2000 * len(withdraw_requests)):
+        print("insufficient fee fund")
+        time.sleep(60)
+        continue
+
     for x in withdraw_requests: ##selects ids that are dupes
         if x in totalTransactionsList.values():
             deleteDupes.append(x)
@@ -33,22 +57,7 @@ while True:
         del withdraw_requests[y]
 
     print("withdraw_requests", withdraw_requests)
-    if len(withdraw_requests) == 0:
-        print("sent all")
-        time.sleep(60)
-        continue
-
-    if isMainnet:
-        ordCommand = [ordPath, "wallet", "balance"]
-    else:
-        ordCommand = [ordPath, "--signet", "wallet", "balance"]
-
-    result = subprocess.run(ordCommand, shell=True, capture_output=True, text=True, encoding="UTF-8")
-    balanceList = json.loads(result.stdout)
     
-    runesOwned = balanceList['runes']
-    pprint.pprint(runesOwned)
-
     ## find first valid withdraw request
     for key, value in withdraw_requests.items(): ##checks if there is sufficient runes, and if the transaction is sent (picks out transaction from the request from the server)
         ## TODO: use key, value instead of i1 
@@ -68,8 +77,9 @@ while True:
         time.sleep(60)
         continue
 
-    amount = transactionInfo['amount']
-    address = transactionInfo['ordAddress']
+    ## server needs to publish only valid withdraws (e.g., amount > 0 or > minimum withdraw amount)
+    amount = int(transactionInfo['amount'])
+    targetAddress = transactionInfo['ordAddress']
     ticker = transactionInfo['ticker']
 
     ## have one valid withdraw request and move on
@@ -77,14 +87,13 @@ while True:
     ## send runes
     rune = f"{amount}:{ticker}"
 
-
     if isMainnet:
-        command = [ordPath, "wallet", "send", "--fee-rate",  feeRate1, address, rune,  "--postage", "330sat", "--dry-run"]
+        command = [ordPath, "wallet", "--name", ordWalletName, "send", "--fee-rate",  feeRate1, targetAddress, rune,  "--postage", "330sat", "--dry-run"]
     else:
-        command = [ordPath, "--signet", "wallet", "send", "--fee-rate",  feeRate1, address, rune,  "--postage", "330sat", "--dry-run"]
+        command = [ordPath, "--signet", "wallet", "send", "--fee-rate",  feeRate1, targetAddress, rune,  "--postage", "330sat", "--dry-run"]
 
     if willBroadcast == True:
-        command.pop()
+        command.pop() ## pop --dry-run so that ord will broadcast
 
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     commandOutput = json.loads(result.stdout)
